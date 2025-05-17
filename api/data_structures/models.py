@@ -3,7 +3,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 
-class TokenData(BaseModel):
+class SpotifyTokenData(BaseModel):
     """
     Represents the Spotify authentication tokens for a user.
 
@@ -38,23 +38,12 @@ class SpotifyImage(BaseModel):
     url: str
 
 
-class SpotifyProfileFollowers(BaseModel):
-    total: int
-
-
-class SpotifyProfileBase(BaseModel):
+class SpotifyProfile(BaseModel):
     id: str
     display_name: str
     email: str | None = None
     href: str
     images: list[SpotifyImage]
-
-
-class SpotifyProfileData(SpotifyProfileBase):
-    followers: SpotifyProfileFollowers
-
-
-class SpotifyProfile(SpotifyProfileBase):
     followers: int
 
 
@@ -116,65 +105,6 @@ class SpotifyTrackAlbum(BaseModel):
     name: str
     images: list[SpotifyImage]
     release_date: str
-
-
-class SpotifyTrackData(SpotifyItemBase):
-    """
-    Represents detailed metadata of a Spotify track.
-
-    Inherits from
-    -------------
-    SpotifyItemBase
-        Provides the `id` and `name` attributes.
-
-    Attributes
-    ----------
-    album : SpotifyTrackAlbum
-        The album the track belongs to.
-    artists : list[SpotifyTrackArtist]
-        A list of artists featured on the track.
-    external_urls : SpotifyItemExternalUrls
-        External URLs related to the track.
-    explicit : bool
-        Indicates whether the track contains explicit content.
-    duration_ms : int
-        The duration of the track in milliseconds.
-    popularity : int
-        The popularity score of the track (0-100).
-    """
-
-    album: SpotifyTrackAlbum
-    artists: list[SpotifyTrackArtist]
-    external_urls: SpotifyItemExternalUrls
-    explicit: bool
-    duration_ms: int
-    popularity: int
-
-
-class SpotifyArtistData(SpotifyItemBase):
-    """
-    Represents detailed metadata of a Spotify artist.
-
-    Inherits from
-    -------------
-    SpotifyItemBase
-        Provides the `id` and `name` attributes.
-
-    Attributes
-    ----------
-    images : list[SpotifyImage]
-        A list of images representing the artist.
-    external_urls : SpotifyItemExternalUrls
-        External URLs related to the artist.
-    genres : list[str]
-        A list of genres associated with the artist.
-    """
-
-    images: list[SpotifyImage]
-    external_urls: SpotifyItemExternalUrls
-    followers: SpotifyProfileFollowers
-    genres: list[str]
-    popularity: int
 
 
 class SpotifyItem(SpotifyItemBase):
@@ -248,42 +178,6 @@ class SpotifyTrack(SpotifyItem):
     explicit: bool
     duration_ms: int
     popularity: int
-
-
-class LyricsRequest(BaseModel):
-    """
-    Represents a request to retrieve lyrics for a track.
-
-    Attributes
-    ----------
-    track_id : str
-        The unique identifier of the track.
-    artist_name : str
-        The name of the artist.
-    track_title : str
-        The title of the track.
-    """
-
-    track_id: str
-    artist_name: str
-    track_title: str
-
-
-class LyricsResponse(LyricsRequest):
-    """
-    Represents a response containing the lyrics for a track.
-
-    Inherits from
-    -------------
-    LyricsRequest, which provides the track_id, artist_name and track_title.
-
-    Attributes
-    ----------
-    lyrics : str
-        The lyrics of the requested track.
-    """
-
-    lyrics: str
 
 
 class AnalysisRequestBase(BaseModel):

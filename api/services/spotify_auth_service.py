@@ -5,7 +5,7 @@ from loguru import logger
 
 import pydantic
 
-from api.data_structures.models import TokenData
+from api.data_structures.models import SpotifyTokenData
 from api.services.endpoint_requester import EndpointRequester, EndpointRequesterException
 from api.services.music.music_service import MusicService
 
@@ -129,7 +129,7 @@ class SpotifyAuthService(SpotifyService):
 
         return f"{self.base_url}/authorize?" + urllib.parse.urlencode(params)
 
-    async def _get_tokens(self, data: dict[str, str], refresh_token: str | None = None) -> TokenData:
+    async def _get_tokens(self, data: dict[str, str], refresh_token: str | None = None) -> SpotifyTokenData:
         """
         Retrieves access and refresh tokens from the Spotify API.
 
@@ -142,7 +142,7 @@ class SpotifyAuthService(SpotifyService):
 
         Returns
         -------
-        TokenData
+        SpotifyTokenData
             A validated TokenData object containing access and refresh tokens.
 
         Raises
@@ -161,7 +161,7 @@ class SpotifyAuthService(SpotifyService):
             access_token = token_data.get("access_token")
             refresh_token = token_data.get("refresh_token", refresh_token)
 
-            return TokenData(access_token=access_token, refresh_token=refresh_token)
+            return SpotifyTokenData(access_token=access_token, refresh_token=refresh_token)
         except EndpointRequesterException as e:
             error_message = f"Spotify API token request failed - {e}"
             logger.error(error_message)
@@ -171,7 +171,7 @@ class SpotifyAuthService(SpotifyService):
             logger.error(error_message)
             raise SpotifyAuthServiceException(error_message)
 
-    async def create_tokens(self, auth_code: str) -> TokenData:
+    async def create_tokens(self, auth_code: str) -> SpotifyTokenData:
         """
         Exchanges an authorization code for access and refresh tokens.
 
@@ -182,7 +182,7 @@ class SpotifyAuthService(SpotifyService):
 
         Returns
         -------
-        TokenData
+        SpotifyTokenData
             A validated TokenData object containing access and refresh tokens.
 
         Raises
@@ -197,7 +197,7 @@ class SpotifyAuthService(SpotifyService):
 
         return tokens
 
-    async def refresh_tokens(self, refresh_token: str) -> TokenData:
+    async def refresh_tokens(self, refresh_token: str) -> SpotifyTokenData:
         """
         Refreshes an expired access token using the refresh token.
 
@@ -208,7 +208,7 @@ class SpotifyAuthService(SpotifyService):
 
         Returns
         -------
-        TokenData
+        SpotifyTokenData
             A validated TokenData object containing new access and refresh tokens.
 
         Raises

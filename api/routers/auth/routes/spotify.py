@@ -5,7 +5,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from api.dependencies import SpotifyAuthServiceDependency, SpotifyDataServiceDependency, DBServiceDependency
-from api.data_structures.models import TokenData
+from api.data_structures.models import SpotifyTokenData
 from api.services.spotify_auth_service import SpotifyAuthServiceException
 
 router = APIRouter(prefix="/spotify")
@@ -40,13 +40,13 @@ class TokensRequest(BaseModel):
     code: str
 
 
-@router.post("/tokens", response_model=TokenData)
+@router.post("/tokens", response_model=SpotifyTokenData)
 async def get_tokens(
         tokens_request: TokensRequest,
         spotify_auth_service: SpotifyAuthServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
         db_service: DBServiceDependency
-) -> TokenData:
+) -> SpotifyTokenData:
     try:
         tokens = await spotify_auth_service.create_tokens(tokens_request.code)
 
