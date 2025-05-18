@@ -52,4 +52,8 @@ class Settings(BaseSettings):
     db_user: str
     db_pass: str
 
+    encryption_keys_dir_path: str
+    encryption_key_id: str
+    encryption_algorithm: str
+
     model_config = SettingsConfigDict(env_file="../.env", env_file_encoding="utf-8")

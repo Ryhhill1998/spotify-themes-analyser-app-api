@@ -4,10 +4,12 @@ from typing import Annotated
 import mysql.connector
 from fastapi import Depends, Request
 
+from api.data_structures.models import EncryptionKeys
 from api.services.db_service import DBService
 from api.services.endpoint_requester import EndpointRequester
 from api.services.spotify_auth_service import SpotifyAuthService
 from api.services.spotify_data_service import SpotifyDataService
+from api.services.token_service import TokenService
 from api.settings import Settings
 
 
@@ -17,6 +19,21 @@ def get_settings() -> Settings:
 
 
 SettingsDependency = Annotated[Settings, Depends(get_settings)]
+
+
+def get_encryption_keys(request: Request) -> EncryptionKeys:
+    return request.app.state.encryption_keys
+
+
+EncryptionKeysDependency = Annotated[EncryptionKeys, Depends(get_encryption_keys)]
+
+
+def get_token_service(encryption_keys: EncryptionKeysDependency, settings: SettingsDependency) -> TokenService:
+    return TokenService(
+        private_key=encryption_keys.private_key,
+        public_key=encryption_keys.public_key,
+        encryption_algorithm=settings.encryption_algorithm
+    )
 
 
 def get_item_from_cookies(request: Request, item_key: str) -> str:

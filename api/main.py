@@ -11,6 +11,7 @@ from api.dependencies import get_settings
 from api.routers.auth import auth
 from api.routers.data import data
 from api.services.endpoint_requester import EndpointRequester
+from api.services.key_manager import KeyManager
 
 settings = get_settings()
 
@@ -24,6 +25,9 @@ def initialise_logger():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     initialise_logger()
+
+    key_manager = KeyManager(settings.encryption_keys_dir_path)
+    app.state.encryption_keys = key_manager.load_encryption_keys(settings.encryption_key_id)
 
     client = httpx.AsyncClient()
 

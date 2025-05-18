@@ -1,6 +1,15 @@
 from enum import Enum
 from typing import Annotated
-from pydantic import BaseModel, Field
+
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey, RSAPrivateKey
+from pydantic import BaseModel, Field, ConfigDict
+
+
+class EncryptionKeys(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    private_key: RSAPrivateKey
+    public_key: RSAPublicKey
 
 
 class SpotifyTokenData(BaseModel):
