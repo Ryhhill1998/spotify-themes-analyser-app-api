@@ -7,7 +7,6 @@ import pydantic
 
 from api.data_structures.models import SpotifyTokenData
 from api.services.endpoint_requester import EndpointRequester, EndpointRequesterException
-from api.services.music.music_service import MusicService
 
 
 class SpotifyAuthServiceException(Exception):
@@ -24,7 +23,7 @@ class SpotifyAuthServiceException(Exception):
         super().__init__(message)
 
 
-class SpotifyAuthService(SpotifyService):
+class SpotifyAuthService:
     """
     Service responsible for handling authentication and token management for Spotify's API.
 
