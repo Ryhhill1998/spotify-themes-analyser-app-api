@@ -11,5 +11,5 @@ class TokenService:
     def create_token(self, payload: dict) -> str:
         return jwt.encode(payload=payload, key=self.private_key, algorithm=self.encryption_algorithm)
 
-    def decode_token(self, token: str):
+    def decode_token(self, token: str) -> dict:
         return jwt.decode(jwt=token, key=self.public_key, algorithms=[self.encryption_algorithm])

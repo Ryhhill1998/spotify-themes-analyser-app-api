@@ -4,7 +4,8 @@ from fastapi import Response, APIRouter, HTTPException
 from loguru import logger
 from pydantic import BaseModel
 
-from api.dependencies import SpotifyAuthServiceDependency, SpotifyDataServiceDependency, DBServiceDependency
+from api.dependencies import SpotifyAuthServiceDependency, SpotifyDataServiceDependency, DBServiceDependency, \
+    TokenServiceDependency
 from api.data_structures.models import SpotifyTokenData
 from api.services.spotify_auth_service import SpotifyAuthServiceException
 
@@ -45,8 +46,9 @@ async def get_tokens(
         tokens_request: TokensRequest,
         spotify_auth_service: SpotifyAuthServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
-        db_service: DBServiceDependency
-) -> SpotifyTokenData:
+        db_service: DBServiceDependency,
+        token_service: TokenServiceDependency
+):
     try:
         tokens = await spotify_auth_service.create_tokens(tokens_request.code)
 
@@ -58,7 +60,10 @@ async def get_tokens(
         # create new user in db
         db_service.create_user(user_id=user_id, refresh_token=tokens.refresh_token)
 
-        return tokens
+        # create JWT
+        jwt = token_service.create_token({"user_id": user_id})
+
+        return {"access_token": jwt, "token_type": "bearer"}
     except SpotifyAuthServiceException as e:
         logger.error(f"Failed to create tokens from code: {tokens_request.code} - {e}")
         raise HTTPException(status_code=401, detail="Invalid authorisation code.")
