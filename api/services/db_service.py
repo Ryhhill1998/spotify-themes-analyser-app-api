@@ -5,7 +5,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 from loguru import logger
 
 from api.data_structures.enums import TopItemType, TopItemTimeRange
-from api.data_structures.models import DBUser
+from api.data_structures.models import DBUser, DBArtist
 
 
 class DBServiceException(Exception):
@@ -61,7 +61,7 @@ class DBService:
             time_range: TopItemTimeRange,
             collected_date: str,
             limit: int
-    ) -> list[dict]:
+    ) -> list[DBArtist]:
         cursor = self.connection.cursor(dictionary=True)
 
         try:
@@ -77,7 +77,8 @@ class DBService:
             cursor.execute(select_statement, (user_id, time_range.value, collected_date))
             results = cursor.fetchall()
             logger.info(f"get_top_items results: {results}")
-            return results
+            top_artists = [DBArtist(**entry) for entry in results]
+            return top_artists
         except mysql.connector.Error as e:
             error_message = (
                 f"Failed to get top artists. User ID: {user_id}, time range: {time_range.value}, "

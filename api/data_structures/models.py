@@ -17,6 +17,11 @@ class DBUser(BaseModel):
     refresh_token: str
 
 
+class DBArtist(BaseModel):
+    artist_id: str
+    position: int
+
+
 class SpotifyTokenData(BaseModel):
     """
     Represents the Spotify authentication tokens for a user.
@@ -30,7 +35,7 @@ class SpotifyTokenData(BaseModel):
     """
 
     access_token: str
-    refresh_token: str
+    refresh_token: str | None
 
 
 class SpotifyImage(BaseModel):
@@ -140,7 +145,6 @@ class SpotifyItem(SpotifyItemBase):
 
     images: list[SpotifyImage]
     spotify_url: str
-    position_change: int | str | None = None
 
 
 class SpotifyArtist(SpotifyItem):
@@ -192,6 +196,10 @@ class SpotifyTrack(SpotifyItem):
     explicit: bool
     duration_ms: int
     popularity: int
+
+
+class ResponseArtist(SpotifyArtist):
+    position: int
 
 
 class AnalysisRequestBase(BaseModel):

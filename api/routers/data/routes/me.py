@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from pydantic import Field
 
 from api.data_structures.enums import TopItemTimeRange
-from api.data_structures.models import SpotifyProfile, SpotifyArtist, SpotifyTrack, TopEmotion
+from api.data_structures.models import SpotifyProfile, SpotifyArtist, SpotifyTrack, TopEmotion, ResponseArtist
 from api.dependencies import DBServiceDependency, SpotifyDataServiceDependency
 
 router = APIRouter(prefix="/me")
@@ -22,13 +22,14 @@ async def get_profile(
     # get profile from spotify data service
 
 
-@router.get("/top/artists")
+@router.get("/top/artists", response_model=list[ResponseArtist])
 async def get_top_artists(
         user_id: str,
         db_service: DBServiceDependency,
+        spotify_data_service: SpotifyDataServiceDependency,
         time_range: TopItemTimeRange,
         limit: Annotated[int, Field(ge=10, le=50)] = 50
-):
+) -> list[ResponseArtist]:
     user = db_service.get_user(user_id)
     uk_tz = ZoneInfo("Europe/London")
 
@@ -49,7 +50,21 @@ async def get_top_artists(
         collected_date=collected_date,
         limit=limit
     )
-    return db_top_artists
+    db_top_artists_ids = [db_artist.artist_id for db_artist in db_top_artists]
+    artist_id_to_position_map = {db_artist.artist_id: db_artist.position for db_artist in db_top_artists}
+    updated_tokens = await spotify_data_service.refresh_tokens(user.refresh_token)
+    spotify_artists = await spotify_data_service.get_several_artists_by_ids(
+        access_token=updated_tokens.access_token,
+        artist_ids=db_top_artists_ids
+    )
+    response_artists = [
+        ResponseArtist(
+            **artist.model_dump(),
+            position=artist_id_to_position_map[artist.id]
+        )
+        for artist in spotify_artists
+    ]
+    return response_artists
 
 
 @router.get("/top/tracks")

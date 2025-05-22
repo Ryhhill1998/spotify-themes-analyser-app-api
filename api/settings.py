@@ -22,11 +22,6 @@ class Settings(BaseSettings):
     frontend_url : str
         The URL of the frontend application.
 
-    lyrics_base_url : str
-        The base URL for the lyrics API.
-    analysis_base_url : str
-        The base URL for the analysis API.
-
     allowed_origins : list[str]
         A list of allowed origins for CORS configuration.
 
@@ -41,9 +36,6 @@ class Settings(BaseSettings):
     spotify_auth_base_url: str
     spotify_data_base_url: str
     frontend_url: str
-
-    lyrics_base_url: str
-    analysis_base_url: str
 
     allowed_origins: list[str]
 
