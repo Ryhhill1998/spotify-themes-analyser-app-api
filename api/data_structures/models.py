@@ -12,6 +12,11 @@ class EncryptionKeys(BaseModel):
     public_key: RSAPublicKey
 
 
+class DBUser(BaseModel):
+    id: str
+    refresh_token: str
+
+
 class SpotifyTokenData(BaseModel):
     """
     Represents the Spotify authentication tokens for a user.
