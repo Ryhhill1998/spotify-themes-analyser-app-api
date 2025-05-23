@@ -22,6 +22,11 @@ class DBArtist(BaseModel):
     position: int
 
 
+class DBTrack(BaseModel):
+    track_id: str
+    position: int
+
+
 class SpotifyTokenData(BaseModel):
     """
     Represents the Spotify authentication tokens for a user.
@@ -199,6 +204,10 @@ class SpotifyTrack(SpotifyItem):
 
 
 class ResponseArtist(SpotifyArtist):
+    position: int
+
+
+class ResponseTrack(SpotifyTrack):
     position: int
 
 
