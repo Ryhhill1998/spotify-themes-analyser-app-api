@@ -27,6 +27,11 @@ class DBTrack(BaseModel):
     position: int
 
 
+class DBGenre(BaseModel):
+    genre_name: str
+    count: int
+
+
 class SpotifyTokenData(BaseModel):
     """
     Represents the Spotify authentication tokens for a user.
@@ -203,12 +208,16 @@ class SpotifyTrack(SpotifyItem):
     popularity: int
 
 
-class ResponseArtist(SpotifyArtist):
+class TopArtist(SpotifyArtist):
     position: int
 
 
-class ResponseTrack(SpotifyTrack):
+class TopTrack(SpotifyTrack):
     position: int
+
+
+class TopGenre(DBGenre):
+    pass
 
 
 class AnalysisRequestBase(BaseModel):

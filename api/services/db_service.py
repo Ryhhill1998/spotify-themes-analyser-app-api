@@ -5,7 +5,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 from loguru import logger
 
 from api.data_structures.enums import TopItemType, TopItemTimeRange
-from api.data_structures.models import DBUser, DBArtist, DBTrack
+from api.data_structures.models import DBUser, DBArtist, DBTrack, DBGenre
 
 
 class DBServiceException(Exception):
@@ -116,6 +116,40 @@ class DBService:
         except mysql.connector.Error as e:
             error_message = (
                 f"Failed to get top tracks. User ID: {user_id}, time range: {time_range.value}, "
+                f"collected_date: {collected_date}"
+            )
+            logger.error(f"{error_message} - {e}")
+            raise DBServiceException(error_message)
+        finally:
+            cursor.close()
+
+    def get_top_genres(
+            self,
+            user_id: str,
+            time_range: TopItemTimeRange,
+            collected_date: str,
+            limit: int
+    ) -> list[DBGenre]:
+        cursor = self.connection.cursor(dictionary=True)
+
+        try:
+            select_statement = (
+                "SELECT * " 
+                f"FROM top_genre "
+                "WHERE spotify_user_id = %s "
+                "AND time_range = %s "
+                "AND collected_date = %s "
+                "ORDER BY count DESC "
+                f"LIMIT {limit};"
+            )
+            cursor.execute(select_statement, (user_id, time_range.value, collected_date))
+            results = cursor.fetchall()
+            logger.info(f"get_top_genres results: {results}")
+            top_genres = [DBGenre(**entry) for entry in results]
+            return top_genres
+        except mysql.connector.Error as e:
+            error_message = (
+                f"Failed to get top genres. User ID: {user_id}, time range: {time_range.value}, "
                 f"collected_date: {collected_date}"
             )
             logger.error(f"{error_message} - {e}")

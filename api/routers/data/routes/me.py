@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from pydantic import Field
 
 from api.data_structures.enums import TopItemTimeRange
-from api.data_structures.models import SpotifyProfile, SpotifyTrack, TopEmotion, ResponseArtist, ResponseTrack
+from api.data_structures.models import SpotifyProfile, SpotifyTrack, TopEmotion, TopArtist, TopTrack, TopGenre
 from api.dependencies import DBServiceDependency, SpotifyDataServiceDependency
 
 router = APIRouter(prefix="/me")
@@ -36,14 +36,14 @@ async def get_profile(
     # get profile from spotify data service
 
 
-@router.get("/top/artists", response_model=list[ResponseArtist])
+@router.get("/top/artists", response_model=list[TopArtist])
 async def get_top_artists(
         user_id: str,
         db_service: DBServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
         time_range: TopItemTimeRange,
         limit: Annotated[int, Field(ge=10, le=50)] = 50
-) -> list[ResponseArtist]:
+) -> list[TopArtist]:
     user = db_service.get_user(user_id)
     collected_date = get_collection_date(update_hour=8, update_minute=30)
 
@@ -60,24 +60,24 @@ async def get_top_artists(
         access_token=updated_tokens.access_token,
         artist_ids=db_top_artists_ids
     )
-    response_artists = [
-        ResponseArtist(
+    top_artists = [
+        TopArtist(
             **artist.model_dump(),
             position=artist_id_to_position_map[artist.id]
         )
         for artist in spotify_artists
     ]
-    return response_artists
+    return top_artists
 
 
-@router.get("/top/tracks", response_model=list[ResponseTrack])
+@router.get("/top/tracks", response_model=list[TopTrack])
 async def get_top_tracks(
         user_id: str,
         db_service: DBServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
         time_range: TopItemTimeRange,
         limit: Annotated[int, Field(ge=10, le=50)] = 50
-) -> list[ResponseTrack]:
+) -> list[TopTrack]:
     user = db_service.get_user(user_id)
     collected_date = get_collection_date(update_hour=8, update_minute=30)
 
@@ -94,23 +94,35 @@ async def get_top_tracks(
         access_token=updated_tokens.access_token,
         track_ids=db_top_tracks_ids
     )
-    response_tracks = [
-        ResponseTrack(
+    top_tracks = [
+        TopTrack(
             **track.model_dump(),
             position=track_id_to_position_map[track.id]
         )
         for track in spotify_tracks
     ]
-    return response_tracks
+    return top_tracks
 
 
 @router.get("/top/genres")
 async def get_top_genres(
         user_id: str,
         db_service: DBServiceDependency,
-        time_range: TopItemTimeRange
-) -> list[TopEmotion]:
-    pass
+        time_range: TopItemTimeRange,
+        limit: Annotated[int, Field(ge=10, le=50)] = 50
+) -> list[TopGenre]:
+    collected_date = get_collection_date(update_hour=8, update_minute=30)
+
+    db_top_genres = db_service.get_top_genres(
+        user_id=user_id,
+        time_range=time_range,
+        collected_date=collected_date,
+        limit=limit
+    )
+
+    top_genres = [TopGenre(**genre.model_dump()) for genre in db_top_genres]
+    return top_genres
+
 
 
 @router.get("/top/emotions")
