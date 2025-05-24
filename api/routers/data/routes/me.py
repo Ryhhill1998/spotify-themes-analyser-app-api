@@ -129,6 +129,17 @@ async def get_top_genres(
 async def get_top_emotions(
         user_id: str,
         db_service: DBServiceDependency,
-        time_range: TopItemTimeRange
+        time_range: TopItemTimeRange,
+        limit: Annotated[int, Field(ge=10, le=50)] = 50
 ) -> list[TopEmotion]:
-    pass
+    collected_date = get_collection_date(update_hour=8, update_minute=30)
+
+    db_top_emotions = db_service.get_top_emotions(
+        user_id=user_id,
+        time_range=time_range,
+        collected_date=collected_date,
+        limit=limit
+    )
+
+    top_emotions = [TopEmotion(**emotion.model_dump()) for emotion in db_top_emotions]
+    return top_emotions
