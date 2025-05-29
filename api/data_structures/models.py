@@ -130,6 +130,7 @@ class SpotifyItem(SpotifyItemBase):
 
     images: list[SpotifyImage]
     spotify_url: str
+    position: int | None
 
 
 class SpotifyArtist(SpotifyItem):
@@ -197,22 +198,24 @@ class PositionChange(str, Enum):
     NEW = "new"  # not in rankings on previous day
 
 
-class TopArtist(SpotifyArtist):
-    position: int
+class TopItem(BaseModel):
     position_change: PositionChange | None = None
 
 
-class TopTrack(SpotifyTrack):
-    position: int
-    position_change: PositionChange | None = None
+class TopArtist(SpotifyArtist, TopItem):
+    pass
 
 
-class TopGenre(SpotifyGenre):
-    position_change: PositionChange | None = None
+class TopTrack(SpotifyTrack, TopItem):
+    pass
 
 
-class TopEmotion(SpotifyEmotion):
-    position_change: PositionChange | None = None
+class TopGenre(SpotifyGenre, TopItem):
+    pass
+
+
+class TopEmotion(SpotifyEmotion, TopItem):
+    pass
 
 
 class AnalysisRequestBase(BaseModel):
