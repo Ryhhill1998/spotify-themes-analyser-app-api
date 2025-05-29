@@ -1,29 +1,45 @@
+from dataclasses import dataclass
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import Field
+import pandas as pd
 
 from api.data_structures.enums import TopItemTimeRange
-from api.data_structures.models import SpotifyProfile, SpotifyTrack, TopEmotion, TopArtist, TopTrack, TopGenre
+from api.data_structures.models import SpotifyProfile, TopEmotion, TopArtist, TopTrack, TopGenre, PositionChange, \
+    SpotifyTokenData
 from api.dependencies import DBServiceDependency, SpotifyDataServiceDependency
+from api.services.db_service import DBService
+from api.services.spotify_data_service import SpotifyDataService
 
 router = APIRouter(prefix="/me")
 
 
-def get_collection_date(update_hour: int, update_minute: int) -> str:
+@dataclass
+class CollectionDates:
+    latest: str
+    previous: str
+
+
+def get_collection_dates(update_hour: int, update_minute: int) -> CollectionDates:
     uk_tz = ZoneInfo("Europe/London")
-    now_uk = datetime.now(uk_tz)
+    latest_date = datetime.now(uk_tz)
 
-    update_time_uk = datetime.combine(now_uk.date(), time(hour=update_hour, minute=update_minute), tzinfo=uk_tz)
+    update_time_uk = datetime.combine(latest_date.date(), time(hour=update_hour, minute=update_minute), tzinfo=uk_tz)
 
-    if now_uk < update_time_uk:
-        now_uk = now_uk - timedelta(days=1)
+    if latest_date < update_time_uk:
+        latest_date -= timedelta(days=1)
 
-    collected_date = now_uk.strftime(format="%Y-%m-%d")
+    prev_date = latest_date - timedelta(days=1)
+
+    collection_dates = CollectionDates(
+        latest=latest_date.strftime(format="%Y-%m-%d"),
+        previous=prev_date.strftime(format="%Y-%m-%d")
+    )
     
-    return collected_date
+    return collection_dates
 
 
 @router.get("/profile", response_model=SpotifyProfile)
@@ -36,6 +52,42 @@ async def get_profile(
     # get profile from spotify data service
 
 
+async def retrieve_user_from_db_and_refresh_tokens(
+        user_id: str,
+        db_service: DBService,
+        spotify_data_service: SpotifyDataService
+) -> SpotifyTokenData:
+    user = db_service.get_user(user_id)
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    updated_tokens = await spotify_data_service.refresh_tokens(user.refresh_token)
+    return updated_tokens
+
+
+def calculate_position_changes(top_items_latest, top_items_previous, item_type: str) -> list[dict]:
+    df_latest = pd.DataFrame([artist.model_dump() for artist in top_items_latest])
+    df_previous = pd.DataFrame([artist.model_dump() for artist in top_items_previous])
+    merged_df = df_latest.merge(right=df_previous, how="outer", on=f"{item_type}_id", suffixes=("", "_prev"))
+    merged_df["position_change"] = merged_df["position_prev"] - merged_df["position"]
+    top_items_with_position_changes = merged_df.to_dict(orient="records")
+    return top_items_with_position_changes
+
+
+def format_position_change(position_change_value: float) -> PositionChange | None:
+    if position_change_value < 0:
+        position_change = PositionChange.DOWN
+    elif position_change_value > 0:
+        position_change = PositionChange.UP
+    elif position_change_value == 0:
+        position_change = None
+    else:
+        position_change = PositionChange.NEW
+
+    return position_change
+
+
 @router.get("/top/artists", response_model=list[TopArtist])
 async def get_top_artists(
         user_id: str,
@@ -44,29 +96,78 @@ async def get_top_artists(
         time_range: TopItemTimeRange,
         limit: Annotated[int, Field(ge=10, le=50)] = 50
 ) -> list[TopArtist]:
-    user = db_service.get_user(user_id)
-    collected_date = get_collection_date(update_hour=8, update_minute=30)
+    updated_tokens = await retrieve_user_from_db_and_refresh_tokens(
+        user_id=user_id,
+        db_service=db_service,
+        spotify_data_service=spotify_data_service
+    )
+    collection_dates = get_collection_dates(update_hour=8, update_minute=30)
 
-    db_top_artists = db_service.get_top_artists(
+    db_top_artists_latest = db_service.get_top_artists(
         user_id=user_id,
         time_range=time_range,
-        collected_date=collected_date,
+        collected_date=collection_dates.latest,
         limit=limit
     )
-    db_top_artists_ids = [db_artist.artist_id for db_artist in db_top_artists]
-    artist_id_to_position_map = {db_artist.artist_id: db_artist.position for db_artist in db_top_artists}
-    updated_tokens = await spotify_data_service.refresh_tokens(user.refresh_token)
+
+    if not db_top_artists_latest:
+        spotify_artists = await spotify_data_service.get_top_artists(access_token=updated_tokens.access_token)
+        top_artists = [
+            TopArtist(
+                **artist.model_dump(),
+                position=index + 1
+            )
+            for index, artist in enumerate(spotify_artists)
+        ]
+        return top_artists
+
+    db_top_artists_previous = db_service.get_top_artists(
+        user_id=user_id,
+        time_range=time_range,
+        collected_date=collection_dates.previous,
+        limit=limit
+    )
+
+    if not db_top_artists_previous:
+        db_top_artists_ids = [db_artist.artist_id for db_artist in db_top_artists_latest]
+        artist_id_to_position_map = {db_artist.artist_id: db_artist.position for db_artist in db_top_artists_latest}
+        spotify_artists = await spotify_data_service.get_several_artists_by_ids(
+            access_token=updated_tokens.access_token,
+            artist_ids=db_top_artists_ids
+        )
+        top_artists = [
+            TopArtist(
+                **artist.model_dump(),
+                position=artist_id_to_position_map[artist.id]
+            )
+            for artist in spotify_artists
+        ]
+        return top_artists
+
+    # calculate position changes
+    artists_with_position_changes = calculate_position_changes(
+        top_items_latest=db_top_artists_latest,
+        top_items_previous=db_top_artists_previous,
+        item_type="artist"
+    )
+    artist_id_to_position_map = {db_artist["artist_id"]: db_artist for db_artist in artists_with_position_changes}
+
+    artists_ids = [db_artist.artist_id for db_artist in db_top_artists_latest]
     spotify_artists = await spotify_data_service.get_several_artists_by_ids(
         access_token=updated_tokens.access_token,
-        artist_ids=db_top_artists_ids
+        artist_ids=artists_ids
     )
-    top_artists = [
-        TopArtist(
-            **artist.model_dump(),
-            position=artist_id_to_position_map[artist.id]
-        )
-        for artist in spotify_artists
-    ]
+
+    top_artists = []
+
+    for artist in spotify_artists:
+        artist_data = artist.model_dump()
+        position_data = artist_id_to_position_map[artist.id]
+        position = position_data["position"]
+        position_change = format_position_change(position_data["position_change"])
+        top_artist = TopArtist(**artist_data, position=position, position_change=position_change)
+        top_artists.append(top_artist)
+
     return top_artists
 
 
@@ -78,68 +179,117 @@ async def get_top_tracks(
         time_range: TopItemTimeRange,
         limit: Annotated[int, Field(ge=10, le=50)] = 50
 ) -> list[TopTrack]:
-    user = db_service.get_user(user_id)
-    collected_date = get_collection_date(update_hour=8, update_minute=30)
+    updated_tokens = await retrieve_user_from_db_and_refresh_tokens(
+        user_id=user_id,
+        db_service=db_service,
+        spotify_data_service=spotify_data_service
+    )
+    collection_dates = get_collection_dates(update_hour=8, update_minute=30)
 
-    db_top_tracks = db_service.get_top_tracks(
+    db_top_tracks_latest = db_service.get_top_tracks(
         user_id=user_id,
         time_range=time_range,
-        collected_date=collected_date,
+        collected_date=collection_dates.latest,
         limit=limit
     )
-    db_top_tracks_ids = [db_track.track_id for db_track in db_top_tracks]
-    track_id_to_position_map = {db_track.track_id: db_track.position for db_track in db_top_tracks}
-    updated_tokens = await spotify_data_service.refresh_tokens(user.refresh_token)
+
+    if not db_top_tracks_latest:
+        spotify_tracks = await spotify_data_service.get_top_tracks(access_token=updated_tokens.access_token)
+        top_tracks = [
+            TopTrack(
+                **track.model_dump(),
+                position=index + 1
+            )
+            for index, track in enumerate(spotify_tracks)
+        ]
+        return top_tracks
+
+    db_top_tracks_previous = db_service.get_top_tracks(
+        user_id=user_id,
+        time_range=time_range,
+        collected_date=collection_dates.previous,
+        limit=limit
+    )
+
+    if not db_top_tracks_previous:
+        db_top_tracks_ids = [db_track.track_id for db_track in db_top_tracks_latest]
+        track_id_to_position_map = {db_track.track_id: db_track.position for db_track in db_top_tracks_latest}
+        spotify_tracks = await spotify_data_service.get_several_tracks_by_ids(
+            access_token=updated_tokens.access_token,
+            track_ids=db_top_tracks_ids
+        )
+        top_tracks = [
+            TopTrack(
+                **track.model_dump(),
+                position=track_id_to_position_map[track.id]
+            )
+            for track in spotify_tracks
+        ]
+        return top_tracks
+
+    # calculate position changes
+    tracks_with_position_changes = calculate_position_changes(
+        top_items_latest=db_top_tracks_latest,
+        top_items_previous=db_top_tracks_previous,
+        item_type="track"
+    )
+    track_id_to_position_map = {db_track["track_id"]: db_track for db_track in tracks_with_position_changes}
+
+    tracks_ids = [db_track.track_id for db_track in db_top_tracks_latest]
     spotify_tracks = await spotify_data_service.get_several_tracks_by_ids(
         access_token=updated_tokens.access_token,
-        track_ids=db_top_tracks_ids
+        track_ids=tracks_ids
     )
-    top_tracks = [
-        TopTrack(
-            **track.model_dump(),
-            position=track_id_to_position_map[track.id]
-        )
-        for track in spotify_tracks
-    ]
+
+    top_tracks = []
+
+    for track in spotify_tracks:
+        track_data = track.model_dump()
+        position_data = track_id_to_position_map[track.id]
+        position = position_data["position"]
+        position_change = format_position_change(position_data["position_change"])
+        top_track = TopTrack(**track_data, position=position, position_change=position_change)
+        top_tracks.append(top_track)
+
     return top_tracks
 
 
-@router.get("/top/genres")
-async def get_top_genres(
-        user_id: str,
-        db_service: DBServiceDependency,
-        time_range: TopItemTimeRange,
-        limit: Annotated[int, Field(ge=10, le=50)] = 50
-) -> list[TopGenre]:
-    collected_date = get_collection_date(update_hour=8, update_minute=30)
-
-    db_top_genres = db_service.get_top_genres(
-        user_id=user_id,
-        time_range=time_range,
-        collected_date=collected_date,
-        limit=limit
-    )
-
-    top_genres = [TopGenre(**genre.model_dump()) for genre in db_top_genres]
-    return top_genres
-
-
-
-@router.get("/top/emotions")
-async def get_top_emotions(
-        user_id: str,
-        db_service: DBServiceDependency,
-        time_range: TopItemTimeRange,
-        limit: Annotated[int, Field(ge=10, le=50)] = 50
-) -> list[TopEmotion]:
-    collected_date = get_collection_date(update_hour=8, update_minute=30)
-
-    db_top_emotions = db_service.get_top_emotions(
-        user_id=user_id,
-        time_range=time_range,
-        collected_date=collected_date,
-        limit=limit
-    )
-
-    top_emotions = [TopEmotion(**emotion.model_dump()) for emotion in db_top_emotions]
-    return top_emotions
+# @router.get("/top/genres")
+# async def get_top_genres(
+#         user_id: str,
+#         db_service: DBServiceDependency,
+#         time_range: TopItemTimeRange,
+#         limit: Annotated[int, Field(ge=10, le=50)] = 50
+# ) -> list[TopGenre]:
+#     collected_date = get_collection_date(update_hour=8, update_minute=30)
+#
+#     db_top_genres = db_service.get_top_genres(
+#         user_id=user_id,
+#         time_range=time_range,
+#         collected_date=collected_date,
+#         limit=limit
+#     )
+#
+#     top_genres = [TopGenre(**genre.model_dump()) for genre in db_top_genres]
+#     return top_genres
+#
+#
+#
+# @router.get("/top/emotions")
+# async def get_top_emotions(
+#         user_id: str,
+#         db_service: DBServiceDependency,
+#         time_range: TopItemTimeRange,
+#         limit: Annotated[int, Field(ge=10, le=50)] = 50
+# ) -> list[TopEmotion]:
+#     collected_date = get_collection_date(update_hour=8, update_minute=30)
+#
+#     db_top_emotions = db_service.get_top_emotions(
+#         user_id=user_id,
+#         time_range=time_range,
+#         collected_date=collected_date,
+#         limit=limit
+#     )
+#
+#     top_emotions = [TopEmotion(**emotion.model_dump()) for emotion in db_top_emotions]
+#     return top_emotions

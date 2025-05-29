@@ -183,29 +183,28 @@ class SpotifyTrack(SpotifyItem):
     popularity: int
 
 
-class PositionChange(Enum(str)):
-    UP = "up"
-    DOWN = "down"
-    NEW = "new"
-    NONE = None
+class PositionChange(str, Enum):
+    UP = "up"  # higher in rankings than previous day
+    DOWN = "down"  # lower in rankings than previous day
+    NEW = "new"  # not in rankings on previous day
 
 
 class TopArtist(SpotifyArtist):
     position: int
-    position_change: PositionChange
+    position_change: PositionChange | None = None
 
 
 class TopTrack(SpotifyTrack):
     position: int
-    position_change: PositionChange
+    position_change: PositionChange | None = None
 
 
 class TopGenre(DBGenre):
-    position_change: PositionChange
+    position_change: PositionChange | None = None
 
 
 class TopEmotion(DBEmotion):
-    position_change: PositionChange
+    position_change: PositionChange | None = None
 
 
 class AnalysisRequestBase(BaseModel):

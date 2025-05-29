@@ -1,4 +1,4 @@
-from api.data_structures.models import SpotifyArtist, SpotifyTokenData, SpotifyTrack
+from api.data_structures.models import SpotifyArtist, SpotifyTokenData, SpotifyTrack, TopGenre, TopEmotion
 from api.services.endpoint_requester import EndpointRequester
 
 
@@ -13,6 +13,13 @@ class SpotifyDataService:
         data = await self.endpoint_requester.post(url=url, json_data=req_body)
         token_data = SpotifyTokenData(**data)
         return token_data
+
+    async def get_top_artists(self, access_token: str) -> list[SpotifyArtist]:
+        url = f"{self.base_url}/data/me/top/artists"
+        req_body = {"access_token": access_token}
+        data = await self.endpoint_requester.post(url=url, json_data=req_body)
+        spotify_artists = [SpotifyArtist(**entry) for entry in data]
+        return spotify_artists
 
     async def get_several_artists_by_ids(self, access_token: str, artist_ids: list[str]) -> list[SpotifyArtist]:
         url = f"{self.base_url}/data/artists"
