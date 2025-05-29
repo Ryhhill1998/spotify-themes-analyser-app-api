@@ -63,7 +63,7 @@ def add_position_changes_to_db_data(
 ) -> list[dict]:
     df_latest = pd.DataFrame([artist.model_dump() for artist in top_items_latest])
     df_previous = pd.DataFrame([artist.model_dump() for artist in top_items_previous])
-    merged_df = df_latest.merge(right=df_previous, how="outer", on=f"{item_type}_{id_key}", suffixes=("", "_prev"))
+    merged_df = df_latest.merge(right=df_previous, how="left", on=f"{item_type}_{id_key}", suffixes=("", "_prev"))
     merged_df["position_change"] = merged_df[f"{comparison_field}_prev"] - merged_df[comparison_field]
     merged_df["position_change"] = merged_df["position_change"].apply(format_position_change)
     top_items_with_position_changes = (
@@ -71,6 +71,7 @@ def add_position_changes_to_db_data(
         .sort_values(by=comparison_field, ascending=False)
         .to_dict(orient="records")
     )
+    print(f"{top_items_with_position_changes = }")
     return top_items_with_position_changes
 
 
@@ -126,6 +127,8 @@ async def enrich_db_data_with_spotify_data(
         position_data = item_id_to_position_map[item.id]
         full_data = {**item_data, **position_data}
         enriched_data.append(full_data)
+
+    enriched_data.sort(key=lambda x: x["position"], reverse=False)
         
     return enriched_data
 
