@@ -173,7 +173,7 @@ class DBService:
                 "WHERE spotify_user_id = %s "
                 "AND time_range = %s "
                 "AND collected_date = %s "
-                "ORDER BY count DESC "
+                "ORDER BY percentage DESC "
                 f"LIMIT {limit};"
             )
             cursor.execute(select_statement, (user_id, time_range.value, collected_date))

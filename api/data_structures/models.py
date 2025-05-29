@@ -34,7 +34,7 @@ class DBGenre(BaseModel):
 class DBEmotion(BaseModel):
     emotion_name: str
     percentage: float
-    track_id: str
+    track_id: str | None
 
 
 class SpotifyTokenData(BaseModel):

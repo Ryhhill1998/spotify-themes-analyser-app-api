@@ -320,21 +320,61 @@ async def get_top_genres(
 
 
 
-# @router.get("/top/emotions")
-# async def get_top_emotions(
-#         user_id: str,
-#         db_service: DBServiceDependency,
-#         time_range: TopItemTimeRange,
-#         limit: Annotated[int, Field(ge=10, le=50)] = 50
-# ) -> list[TopEmotion]:
-#     collected_date = get_collection_date(update_hour=8, update_minute=30)
-#
-#     db_top_emotions = db_service.get_top_emotions(
-#         user_id=user_id,
-#         time_range=time_range,
-#         collected_date=collected_date,
-#         limit=limit
-#     )
-#
-#     top_emotions = [TopEmotion(**emotion.model_dump()) for emotion in db_top_emotions]
-#     return top_emotions
+@router.get("/top/emotions")
+async def get_top_emotions(
+        user_id: str,
+        db_service: DBServiceDependency,
+        spotify_data_service: SpotifyDataServiceDependency,
+        time_range: TopItemTimeRange,
+        limit: Annotated[int, Field(ge=10, le=50)] = 50
+) -> list[TopEmotion]:
+    updated_tokens = await retrieve_user_from_db_and_refresh_tokens(
+        user_id=user_id,
+        db_service=db_service,
+        spotify_data_service=spotify_data_service
+    )
+    collection_dates = get_collection_dates(update_hour=8, update_minute=30)
+
+    db_top_emotions_latest = db_service.get_top_emotions(
+        user_id=user_id,
+        time_range=time_range,
+        collected_date=collection_dates.latest,
+        limit=limit
+    )
+
+    if not db_top_emotions_latest:
+        spotify_emotions = spotify_data_service.get_top_emotions(updated_tokens.access_token)
+        top_emotions = [TopEmotion(**emotion.model_dump(), position_change=None) for emotion in spotify_emotions]
+        return top_emotions
+
+    db_top_emotions_previous = db_service.get_top_emotions(
+        user_id=user_id,
+        time_range=time_range,
+        collected_date=collection_dates.previous,
+        limit=limit
+    )
+
+    if not db_top_emotions_previous:
+        top_emotions = [TopEmotion(**emotion.model_dump(), position_change=None) for emotion in db_top_emotions_latest]
+        return top_emotions
+
+    # calculate position changes
+    emotions_with_position_changes = calculate_position_changes(
+        top_items_latest=db_top_emotions_latest,
+        top_items_previous=db_top_emotions_previous,
+        item_type="emotion",
+        comparison_field="percentage",
+        id_key="name"
+    )
+
+    top_emotions = [
+        TopEmotion(
+            emotion_name=emotion["emotion_name"],
+            percentage=emotion["percentage"],
+            track_id=emotion["track_id"],
+            position_change=format_position_change(emotion["position_change"])
+        )
+        for emotion in emotions_with_position_changes
+    ]
+
+    return top_emotions
