@@ -66,12 +66,18 @@ async def retrieve_user_from_db_and_refresh_tokens(
     return updated_tokens
 
 
-def calculate_position_changes(top_items_latest, top_items_previous, item_type: str) -> list[dict]:
+def calculate_position_changes(
+        top_items_latest,
+        top_items_previous,
+        item_type: str,
+        comparison_field: str = "position",
+        id_key: str = "id"
+) -> list[dict]:
     df_latest = pd.DataFrame([artist.model_dump() for artist in top_items_latest])
     df_previous = pd.DataFrame([artist.model_dump() for artist in top_items_previous])
-    merged_df = df_latest.merge(right=df_previous, how="outer", on=f"{item_type}_id", suffixes=("", "_prev"))
-    merged_df["position_change"] = merged_df["position_prev"] - merged_df["position"]
-    top_items_with_position_changes = merged_df.to_dict(orient="records")
+    merged_df = df_latest.merge(right=df_previous, how="outer", on=f"{item_type}_{id_key}", suffixes=("", "_prev"))
+    merged_df["position_change"] = merged_df[f"{comparison_field}_prev"] - merged_df[comparison_field]
+    top_items_with_position_changes = merged_df.sort_values(by=comparison_field, ascending=False).to_dict(orient="records")
     return top_items_with_position_changes
 
 
@@ -254,27 +260,66 @@ async def get_top_tracks(
     return top_tracks
 
 
-# @router.get("/top/genres")
-# async def get_top_genres(
-#         user_id: str,
-#         db_service: DBServiceDependency,
-#         time_range: TopItemTimeRange,
-#         limit: Annotated[int, Field(ge=10, le=50)] = 50
-# ) -> list[TopGenre]:
-#     collected_date = get_collection_date(update_hour=8, update_minute=30)
-#
-#     db_top_genres = db_service.get_top_genres(
-#         user_id=user_id,
-#         time_range=time_range,
-#         collected_date=collected_date,
-#         limit=limit
-#     )
-#
-#     top_genres = [TopGenre(**genre.model_dump()) for genre in db_top_genres]
-#     return top_genres
-#
-#
-#
+@router.get("/top/genres")
+async def get_top_genres(
+        user_id: str,
+        db_service: DBServiceDependency,
+        spotify_data_service: SpotifyDataServiceDependency,
+        time_range: TopItemTimeRange,
+        limit: Annotated[int, Field(ge=10, le=50)] = 50
+) -> list[TopGenre]:
+    updated_tokens = await retrieve_user_from_db_and_refresh_tokens(
+        user_id=user_id,
+        db_service=db_service,
+        spotify_data_service=spotify_data_service
+    )
+    collection_dates = get_collection_dates(update_hour=8, update_minute=30)
+
+    db_top_genres_latest = db_service.get_top_genres(
+        user_id=user_id,
+        time_range=time_range,
+        collected_date=collection_dates.latest,
+        limit=limit
+    )
+    
+    if not db_top_genres_latest:
+        spotify_genres = spotify_data_service.get_top_genres(updated_tokens.access_token)
+        top_genres = [TopGenre(**genre.model_dump(), position_change=None) for genre in spotify_genres]
+        return top_genres
+
+    db_top_genres_previous = db_service.get_top_genres(
+        user_id=user_id,
+        time_range=time_range,
+        collected_date=collection_dates.previous,
+        limit=limit
+    )
+    
+    if not db_top_genres_previous:
+        top_genres = [TopGenre(**genre.model_dump(), position_change=None) for genre in db_top_genres_latest]
+        return top_genres
+
+    # calculate position changes
+    genres_with_position_changes = calculate_position_changes(
+        top_items_latest=db_top_genres_latest,
+        top_items_previous=db_top_genres_previous,
+        item_type="genre",
+        comparison_field="count",
+        id_key="name"
+    )
+
+    top_genres = [
+        TopGenre(
+            genre_name=genre["genre_name"],
+            count=genre["count"],
+            position_change=format_position_change(genre["position_change"])
+        )
+        for genre in genres_with_position_changes
+    ]
+
+    return top_genres
+
+
+
 # @router.get("/top/emotions")
 # async def get_top_emotions(
 #         user_id: str,

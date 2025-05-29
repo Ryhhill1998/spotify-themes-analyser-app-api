@@ -183,6 +183,14 @@ class SpotifyTrack(SpotifyItem):
     popularity: int
 
 
+class SpotifyGenre(DBGenre):
+    pass
+
+
+class SpotifyEmotion(DBEmotion):
+    pass
+
+
 class PositionChange(str, Enum):
     UP = "up"  # higher in rankings than previous day
     DOWN = "down"  # lower in rankings than previous day
@@ -199,11 +207,11 @@ class TopTrack(SpotifyTrack):
     position_change: PositionChange | None = None
 
 
-class TopGenre(DBGenre):
+class TopGenre(SpotifyGenre):
     position_change: PositionChange | None = None
 
 
-class TopEmotion(DBEmotion):
+class TopEmotion(SpotifyEmotion):
     position_change: PositionChange | None = None
 
 
