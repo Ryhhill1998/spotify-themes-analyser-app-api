@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import mysql.connector
 from mysql.connector.pooling import PooledMySQLConnection
 from loguru import logger
@@ -55,135 +53,48 @@ class DBService:
         finally:
             cursor.close()
 
-    def get_top_artists(
-            self,
-            user_id: str,
-            time_range: TopItemTimeRange,
-            collected_date: str,
-            limit: int
-    ) -> list[DBArtist]:
-        cursor = self.connection.cursor(dictionary=True)
-
-        try:
-            select_statement = (
-                "SELECT * " 
-                f"FROM top_artist "
-                "WHERE spotify_user_id = %s "
-                "AND time_range = %s "
-                "AND collected_date = %s "
-                "ORDER BY position "
-                f"LIMIT {limit};"
-            )
-            cursor.execute(select_statement, (user_id, time_range.value, collected_date))
-            results = cursor.fetchall()
-            logger.info(f"get_top_artists results: {results}")
-            top_artists = [DBArtist(**entry) for entry in results]
-            return top_artists
-        except mysql.connector.Error as e:
-            error_message = (
-                f"Failed to get top artists. User ID: {user_id}, time range: {time_range.value}, "
-                f"collected_date: {collected_date}"
-            )
-            logger.error(f"{error_message} - {e}")
-            raise DBServiceException(error_message)
-        finally:
-            cursor.close()
+    @staticmethod
+    def _create_db_items_from_data(data: list[dict], item_type: TopItemType):
+        if item_type == TopItemType.ARTIST:
+            return [DBArtist(**entry) for entry in data]
+        elif item_type == TopItemType.TRACK:
+            return [DBTrack(**entry) for entry in data]
+        elif item_type == TopItemType.GENRE:
+            return [DBGenre(**entry) for entry in data]
+        elif item_type == TopItemType.EMOTION:
+            return [DBEmotion(**entry) for entry in data]
+        else:
+            raise ValueError("Invalid item type")
             
-    def get_top_tracks(
+    def get_top_items(
             self,
             user_id: str,
             time_range: TopItemTimeRange,
             collected_date: str,
-            limit: int
-    ) -> list[DBTrack]:
+            limit: int,
+            item_type: TopItemType,
+            order_field: str
+    ):
         cursor = self.connection.cursor(dictionary=True)
 
         try:
             select_statement = (
-                "SELECT * " 
-                f"FROM top_track "
+                "SELECT * "
+                f"FROM top_{item_type.value} "
                 "WHERE spotify_user_id = %s "
                 "AND time_range = %s "
                 "AND collected_date = %s "
-                "ORDER BY position "
+                f"ORDER BY {order_field} "
                 f"LIMIT {limit};"
             )
             cursor.execute(select_statement, (user_id, time_range.value, collected_date))
             results = cursor.fetchall()
-            logger.info(f"get_top_tracks results: {results}")
-            top_tracks = [DBTrack(**entry) for entry in results]
-            return top_tracks
+            logger.info(f"get top {item_type.value}s results: {results}")
+            top_items = self._create_db_items_from_data(data=results, item_type=item_type)
+            return top_items
         except mysql.connector.Error as e:
             error_message = (
-                f"Failed to get top tracks. User ID: {user_id}, time range: {time_range.value}, "
-                f"collected_date: {collected_date}"
-            )
-            logger.error(f"{error_message} - {e}")
-            raise DBServiceException(error_message)
-        finally:
-            cursor.close()
-
-    def get_top_genres(
-            self,
-            user_id: str,
-            time_range: TopItemTimeRange,
-            collected_date: str,
-            limit: int
-    ) -> list[DBGenre]:
-        cursor = self.connection.cursor(dictionary=True)
-
-        try:
-            select_statement = (
-                "SELECT * " 
-                f"FROM top_genre "
-                "WHERE spotify_user_id = %s "
-                "AND time_range = %s "
-                "AND collected_date = %s "
-                "ORDER BY count DESC "
-                f"LIMIT {limit};"
-            )
-            cursor.execute(select_statement, (user_id, time_range.value, collected_date))
-            results = cursor.fetchall()
-            logger.info(f"get_top_genres results: {results}")
-            top_genres = [DBGenre(**entry) for entry in results]
-            return top_genres
-        except mysql.connector.Error as e:
-            error_message = (
-                f"Failed to get top genres. User ID: {user_id}, time range: {time_range.value}, "
-                f"collected_date: {collected_date}"
-            )
-            logger.error(f"{error_message} - {e}")
-            raise DBServiceException(error_message)
-        finally:
-            cursor.close()
-            
-    def get_top_emotions(
-            self,
-            user_id: str,
-            time_range: TopItemTimeRange,
-            collected_date: str,
-            limit: int
-    ) -> list[DBEmotion]:
-        cursor = self.connection.cursor(dictionary=True)
-
-        try:
-            select_statement = (
-                "SELECT * " 
-                f"FROM top_emotion "
-                "WHERE spotify_user_id = %s "
-                "AND time_range = %s "
-                "AND collected_date = %s "
-                "ORDER BY percentage DESC "
-                f"LIMIT {limit};"
-            )
-            cursor.execute(select_statement, (user_id, time_range.value, collected_date))
-            results = cursor.fetchall()
-            logger.info(f"get_top_emotions results: {results}")
-            top_emotions = [DBEmotion(**entry) for entry in results]
-            return top_emotions
-        except mysql.connector.Error as e:
-            error_message = (
-                f"Failed to get top emotions. User ID: {user_id}, time range: {time_range.value}, "
+                f"Failed to get top {item_type.value}s. User ID: {user_id}, time range: {time_range.value}, "
                 f"collected_date: {collected_date}"
             )
             logger.error(f"{error_message} - {e}")
