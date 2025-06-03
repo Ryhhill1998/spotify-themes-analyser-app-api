@@ -1,5 +1,6 @@
 from api.data_structures.enums import TopItemType
-from api.data_structures.models import SpotifyArtist, SpotifyTokenData, SpotifyTrack, SpotifyGenre, SpotifyItem
+from api.data_structures.models import SpotifyArtist, SpotifyTokens, SpotifyTrack, SpotifyGenre, SpotifyItem, \
+    SpotifyProfile
 from api.services.endpoint_requester import EndpointRequester
 
 
@@ -8,12 +9,19 @@ class SpotifyDataService:
         self.base_url = base_url
         self.endpoint_requester = endpoint_requester
         
-    async def refresh_tokens(self, refresh_token: str) -> SpotifyTokenData:
+    async def refresh_tokens(self, refresh_token: str) -> SpotifyTokens:
         url = f"{self.base_url}/auth/tokens/refresh"
         req_body = {"refresh_token": refresh_token}
         data = await self.endpoint_requester.post(url=url, json_data=req_body)
-        token_data = SpotifyTokenData(**data)
-        return token_data
+        tokens = SpotifyTokens(**data)
+        return tokens
+
+    async def get_profile(self, access_token: str) -> SpotifyProfile:
+        url = f"{self.base_url}/data/me/profile"
+        req_body = {"access_token": access_token}
+        data = await self.endpoint_requester.post(url=url, json_data=req_body)
+        profile = SpotifyProfile(**data)
+        return profile
 
     @staticmethod
     def _create_spotify_items_from_data(data: list[dict], item_type: TopItemType):

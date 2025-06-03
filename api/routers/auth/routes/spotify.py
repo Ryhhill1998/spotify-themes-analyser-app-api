@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from api.dependencies import SpotifyAuthServiceDependency, SpotifyDataServiceDependency, DBServiceDependency, \
     TokenServiceDependency
-from api.data_structures.models import SpotifyTokenData
+from api.data_structures.models import SpotifyTokens
 from api.services.spotify_auth_service import SpotifyAuthServiceException
 
 router = APIRouter(prefix="/spotify")
@@ -41,7 +41,7 @@ class TokensRequest(BaseModel):
     code: str
 
 
-@router.post("/tokens", response_model=SpotifyTokenData)
+@router.post("/tokens", response_model=SpotifyTokens)
 async def get_tokens(
         tokens_request: TokensRequest,
         spotify_auth_service: SpotifyAuthServiceDependency,

@@ -37,7 +37,7 @@ class DBEmotion(BaseModel):
     track_id: str | None
 
 
-class SpotifyTokenData(BaseModel):
+class SpotifyTokens(BaseModel):
     """
     Represents the Spotify authentication tokens for a user.
 

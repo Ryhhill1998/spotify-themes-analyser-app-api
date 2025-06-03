@@ -9,12 +9,26 @@ import pandas as pd
 
 from api.data_structures.enums import TopItemTimeRange, TopItemType
 from api.data_structures.models import (SpotifyProfile, TopEmotion, TopArtist, TopTrack, TopGenre, PositionChange,
-                                        SpotifyTokenData)
+                                        SpotifyTokens)
 from api.dependencies import DBServiceDependency, SpotifyDataServiceDependency
 from api.services.db_service import DBService
 from api.services.spotify_data_service import SpotifyDataService
 
 router = APIRouter(prefix="/me")
+
+
+async def retrieve_user_from_db_and_refresh_tokens(
+        user_id: str,
+        db_service: DBService,
+        spotify_data_service: SpotifyDataService
+) -> SpotifyTokens:
+    user = db_service.get_user(user_id)
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    updated_tokens = await spotify_data_service.refresh_tokens(user.refresh_token)
+    return updated_tokens
 
 
 @router.get("/profile", response_model=SpotifyProfile)
@@ -23,22 +37,13 @@ async def get_profile(
         db_service: DBServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency
 ) -> SpotifyProfile:
-    user = db_service.get_user(user_id)
-    # get profile from spotify data service
-
-
-async def retrieve_user_from_db_and_refresh_tokens(
-        user_id: str,
-        db_service: DBService,
-        spotify_data_service: SpotifyDataService
-) -> SpotifyTokenData:
-    user = db_service.get_user(user_id)
-
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    updated_tokens = await spotify_data_service.refresh_tokens(user.refresh_token)
-    return updated_tokens
+    updated_tokens = await retrieve_user_from_db_and_refresh_tokens(
+        user_id=user_id,
+        db_service=db_service,
+        spotify_data_service=spotify_data_service
+    )
+    profile = await spotify_data_service.get_profile(updated_tokens.access_token)
+    return profile
 
 
 def format_position_change(position_change_value: float) -> PositionChange | None:
