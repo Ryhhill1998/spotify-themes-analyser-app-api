@@ -11,24 +11,11 @@ from api.data_structures.enums import TopItemTimeRange, TopItemType
 from api.data_structures.models import (SpotifyProfile, TopEmotion, TopArtist, TopTrack, TopGenre, PositionChange,
                                         SpotifyTokens)
 from api.dependencies import DBServiceDependency, SpotifyDataServiceDependency
+from api.routers.data.routes.helpers import retrieve_user_from_db_and_refresh_tokens
 from api.services.db_service import DBService
 from api.services.spotify_data_service import SpotifyDataService
 
 router = APIRouter(prefix="/me")
-
-
-async def retrieve_user_from_db_and_refresh_tokens(
-        user_id: str,
-        db_service: DBService,
-        spotify_data_service: SpotifyDataService
-) -> SpotifyTokens:
-    user = db_service.get_user(user_id)
-
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    updated_tokens = await spotify_data_service.refresh_tokens(user.refresh_token)
-    return updated_tokens
 
 
 @router.get("/profile", response_model=SpotifyProfile)
