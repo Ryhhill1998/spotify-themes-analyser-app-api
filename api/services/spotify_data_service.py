@@ -1,6 +1,6 @@
 from api.data_structures.enums import TopItemType
 from api.data_structures.models import SpotifyArtist, SpotifyTokens, SpotifyTrack, SpotifyGenre, SpotifyItem, \
-    SpotifyProfile
+    SpotifyProfile, Emotion, EmotionalTagsResponse
 from api.services.endpoint_requester import EndpointRequester
 
 
@@ -76,3 +76,15 @@ class SpotifyDataService:
             return SpotifyTrack(**data)
         else:
             raise ValueError("Invalid item type")
+
+    async def get_lyrics_tagged_with_emotion(
+            self,
+            access_token: str,
+            track_id: str,
+            emotion: Emotion
+    ) -> EmotionalTagsResponse:
+        url = f"{self.base_url}/data/tracks/{track_id}/lyrics/emotional-tags/{emotion.value}"
+        req_body = {"access_token": access_token}
+        data = await self.endpoint_requester.post(url=url, json_data=req_body)
+        emotional_tags = EmotionalTagsResponse(**data)
+        return emotional_tags
