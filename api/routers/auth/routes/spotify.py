@@ -41,14 +41,14 @@ class TokensRequest(BaseModel):
     code: str
 
 
-@router.post("/tokens", response_model=SpotifyTokens)
+@router.post("/tokens", response_model=dict[str, str])
 async def get_tokens(
         tokens_request: TokensRequest,
         spotify_auth_service: SpotifyAuthServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
         db_service: DBServiceDependency,
         token_service: TokenServiceDependency
-):
+) -> dict[str, str]:
     try:
         tokens = await spotify_auth_service.create_tokens(tokens_request.code)
 

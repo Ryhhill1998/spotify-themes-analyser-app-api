@@ -80,14 +80,12 @@ class SpotifyAuthService:
             The service responsible for making API requests.
         """
 
-        super().__init__(
-            client_id=client_id,
-            client_secret=client_secret,
-            base_url=base_url,
-            endpoint_requester=endpoint_requester
-        )
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.base_url = base_url
         self.redirect_uri = redirect_uri
         self.auth_scope = auth_scope
+        self.endpoint_requester = endpoint_requester
 
     @cached_property
     def _auth_header(self) -> str:
