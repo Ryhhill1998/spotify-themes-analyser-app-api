@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from api.data_structures.enums import TopItemType
 from api.data_structures.models import SpotifyArtist
-from api.dependencies import SpotifyDataServiceDependency, DBServiceDependency
+from api.dependencies import SpotifyDataServiceDependency, DBServiceDependency, GetUserIdDependency
 from api.routers.data.routes.helpers import retrieve_user_from_db_and_refresh_tokens
 
 router = APIRouter(prefix="/artists")
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/artists")
 
 @router.get("/{artist_id}", response_model=SpotifyArtist)
 async def get_artist_by_id(
-        user_id: str,
+        user_id: GetUserIdDependency,
         artist_id: str,
         db_service: DBServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency

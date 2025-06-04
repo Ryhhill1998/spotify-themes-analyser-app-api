@@ -206,7 +206,7 @@ async def get_top_items(
 
 @router.get("/top/artists", response_model=list[TopArtist])
 async def get_top_artists(
-        user_id: str,
+        user_id: GetUserIdDependency,
         db_service: DBServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
         time_range: TopItemTimeRange,
@@ -225,7 +225,7 @@ async def get_top_artists(
 
 @router.get("/top/tracks", response_model=list[TopTrack])
 async def get_top_tracks(
-        user_id: str,
+        user_id: GetUserIdDependency,
         db_service: DBServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
         time_range: TopItemTimeRange,
@@ -244,7 +244,7 @@ async def get_top_tracks(
 
 @router.get("/top/genres", response_model=list[TopGenre])
 async def get_top_genres(
-        user_id: str,
+        user_id: GetUserIdDependency,
         db_service: DBServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
         time_range: TopItemTimeRange,
@@ -266,7 +266,7 @@ async def get_top_genres(
 
 @router.get("/top/emotions", response_model=list[TopEmotion])
 async def get_top_emotions(
-        user_id: str,
+        user_id: GetUserIdDependency,
         db_service: DBServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
         time_range: TopItemTimeRange,
