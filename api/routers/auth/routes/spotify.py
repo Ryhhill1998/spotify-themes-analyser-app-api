@@ -53,7 +53,7 @@ async def get_token(
 
         # use access_token to get user_id from Spotify
         spotify_data_service.access_token = tokens.access_token
-        profile_data = await spotify_data_service.get_profile_data()
+        profile_data = await spotify_data_service.get_profile(tokens.access_token)
         user_id = profile_data.id
 
         # create new user in db
