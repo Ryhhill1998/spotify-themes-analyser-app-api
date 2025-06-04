@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 from api.dependencies import SpotifyAuthServiceDependency, SpotifyDataServiceDependency, DBServiceDependency, \
     TokenServiceDependency
-from api.data_structures.models import SpotifyTokens
 from api.services.spotify_auth_service import SpotifyAuthServiceException
 
 router = APIRouter(prefix="/spotify")
@@ -37,20 +36,20 @@ async def login(spotify_auth_service: SpotifyAuthServiceDependency):
     return {"login_url": url, "oauth_state": state}
 
 
-class TokensRequest(BaseModel):
+class TokenRequest(BaseModel):
     code: str
 
 
-@router.post("/tokens", response_model=dict[str, str])
-async def get_tokens(
-        tokens_request: TokensRequest,
+@router.post("/token", response_model=dict[str, str])
+async def get_token(
+        token_request: TokenRequest,
         spotify_auth_service: SpotifyAuthServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
         db_service: DBServiceDependency,
         token_service: TokenServiceDependency
 ) -> dict[str, str]:
     try:
-        tokens = await spotify_auth_service.create_tokens(tokens_request.code)
+        tokens = await spotify_auth_service.create_tokens(token_request.code)
 
         # use access_token to get user_id from Spotify
         spotify_data_service.access_token = tokens.access_token
@@ -65,5 +64,5 @@ async def get_tokens(
 
         return {"access_token": jwt, "token_type": "bearer"}
     except SpotifyAuthServiceException as e:
-        logger.error(f"Failed to create tokens from code: {tokens_request.code} - {e}")
+        logger.error(f"Failed to create tokens from code: {token_request.code} - {e}")
         raise HTTPException(status_code=401, detail="Invalid authorisation code.")

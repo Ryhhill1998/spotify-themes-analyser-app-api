@@ -3,6 +3,7 @@ from typing import Annotated
 
 import mysql.connector
 from fastapi import Depends, Request
+from fastapi.security import OAuth2PasswordBearer
 
 from api.services.db_service import DBService
 from api.services.endpoint_requester import EndpointRequester
@@ -30,30 +31,15 @@ def get_token_service(settings: SettingsDependency) -> TokenService:
 TokenServiceDependency = Annotated[TokenService, Depends(get_token_service)]
 
 
-def get_item_from_cookies(request: Request, item_key: str) -> str:
-    cookies = request.cookies
-    return cookies.get(item_key)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/spotify/token")
 
 
-def get_user_id_from_cookies(request: Request) -> str:
-    return get_item_from_cookies(request=request, item_key="user_id")
+def get_user_id_from_token(token: Annotated[str, Depends(oauth2_scheme)], token_service: TokenServiceDependency) -> str:
+    user_id = token_service.decode_token(token)["user_id"]
+    return user_id
 
 
-UserIdDependency = Annotated[str, Depends(get_user_id_from_cookies)]
-
-
-def get_access_token_from_cookies(request: Request) -> str:
-    return get_item_from_cookies(request=request, item_key="access_token")
-
-
-AccessTokenDependency = Annotated[str, Depends(get_access_token_from_cookies)]
-
-
-def get_refresh_token_from_cookies(request: Request) -> str:
-    return get_item_from_cookies(request=request, item_key="refresh_token")
-
-
-RefreshTokenDependency = Annotated[str, Depends(get_refresh_token_from_cookies)]
+GetUserIdDependency = Annotated[str, Depends(get_user_id_from_token)]
 
 
 def get_endpoint_requester(request: Request) -> EndpointRequester:

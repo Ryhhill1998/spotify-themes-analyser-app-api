@@ -8,9 +8,8 @@ from pydantic import Field
 import pandas as pd
 
 from api.data_structures.enums import TopItemTimeRange, TopItemType
-from api.data_structures.models import (SpotifyProfile, TopEmotion, TopArtist, TopTrack, TopGenre, PositionChange,
-                                        SpotifyTokens)
-from api.dependencies import DBServiceDependency, SpotifyDataServiceDependency
+from api.data_structures.models import SpotifyProfile, TopEmotion, TopArtist, TopTrack, TopGenre, PositionChange
+from api.dependencies import DBServiceDependency, SpotifyDataServiceDependency, GetUserIdDependency
 from api.routers.data.routes.helpers import retrieve_user_from_db_and_refresh_tokens
 from api.services.db_service import DBService
 from api.services.spotify_data_service import SpotifyDataService
@@ -20,7 +19,7 @@ router = APIRouter(prefix="/me")
 
 @router.get("/profile", response_model=SpotifyProfile)
 async def get_profile(
-        user_id: str,
+        user_id: GetUserIdDependency,
         db_service: DBServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency
 ) -> SpotifyProfile:
