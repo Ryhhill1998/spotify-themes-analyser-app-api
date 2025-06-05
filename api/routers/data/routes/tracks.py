@@ -3,7 +3,6 @@ from fastapi import APIRouter
 from api.data_structures.enums import TopItemType
 from api.data_structures.models import Emotion, EmotionalTagsResponse, SpotifyTrack
 from api.dependencies import DBServiceDependency, SpotifyDataServiceDependency, GetUserIdDependency
-from api.routers.data.routes.helpers import retrieve_user_from_db_and_refresh_tokens
 
 router = APIRouter(prefix="/tracks")
 
@@ -15,11 +14,8 @@ async def get_track_by_id(
         db_service: DBServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency
 ) -> SpotifyTrack:
-    updated_tokens = await retrieve_user_from_db_and_refresh_tokens(
-        user_id=user_id,
-        db_service=db_service,
-        spotify_data_service=spotify_data_service
-    )
+    user = db_service.get_user(user_id)
+    updated_tokens = await spotify_data_service.refresh_tokens(user.refresh_token)
     track = await spotify_data_service.get_item_by_id(
         access_token=updated_tokens.access_token,
         item_id=track_id,
@@ -36,11 +32,8 @@ async def get_lyrics_tagged_with_emotion(
         db_service: DBServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency
 ) -> EmotionalTagsResponse:
-    updated_tokens = await retrieve_user_from_db_and_refresh_tokens(
-        user_id=user_id,
-        db_service=db_service,
-        spotify_data_service=spotify_data_service
-    )
+    user = db_service.get_user(user_id)
+    updated_tokens = await spotify_data_service.refresh_tokens(user.refresh_token)
     emotional_tags = await spotify_data_service.get_lyrics_tagged_with_emotion(
         access_token=updated_tokens.access_token,
         track_id=track_id,

@@ -10,6 +10,7 @@ from api.services.endpoint_requester import EndpointRequester
 from api.services.spotify_auth_service import SpotifyAuthService
 from api.services.spotify_data_service import SpotifyDataService
 from api.services.token_service import TokenService
+from api.services.top_items_processor import TopItemsProcessor
 from api.settings import Settings
 
 
@@ -91,3 +92,13 @@ def get_spotify_data_service(
 
 
 SpotifyDataServiceDependency = Annotated[SpotifyDataService, Depends(get_spotify_data_service)]
+
+
+def get_top_items_processor(
+        db_service: DBServiceDependency,
+        spotify_data_service: SpotifyDataServiceDependency
+) -> TopItemsProcessor:
+    return TopItemsProcessor(db_service=db_service, spotify_data_service=spotify_data_service)
+
+
+TopItemsProcessorDependency = Annotated[TopItemsProcessor, Depends(get_top_items_processor)]
