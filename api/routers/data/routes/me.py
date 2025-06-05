@@ -143,8 +143,9 @@ async def get_top_items(
         time_range: TopItemTimeRange,
         limit: int,
         item_type: TopItemType,
-        comparison_field: str = "position",
+        order_by_field: str = "position",
         order_direction: str = "ASC",
+        comparison_field: str = "position",
         id_key: str = "id",
         enrich_data: bool = True
 ):
@@ -161,7 +162,7 @@ async def get_top_items(
         collected_date=collection_dates.latest,
         limit=limit,
         item_type=item_type,
-        order_field=comparison_field,
+        order_field=order_by_field,
         order_direction=order_direction
     )
 
@@ -179,7 +180,7 @@ async def get_top_items(
         collected_date=collection_dates.previous,
         limit=limit,
         item_type=item_type,
-        order_field=comparison_field,
+        order_field=order_by_field,
         order_direction=order_direction
     )
 
@@ -251,7 +252,7 @@ async def get_top_genres(
         db_service: DBServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
         time_range: TopItemTimeRange,
-        limit: Annotated[int, Field(ge=10, le=50)] = 50
+        limit: Annotated[int, Field(ge=1)] = 5
 ) -> list[TopGenre]:
     top_genres = await get_top_items(
         user_id=user_id,
@@ -260,8 +261,9 @@ async def get_top_genres(
         time_range=time_range,
         limit=limit,
         item_type=TopItemType.GENRE,
-        comparison_field="count",
+        order_by_field="count",
         order_direction="DESC",
+        comparison_field="percentage",
         id_key="name",
         enrich_data=False
     )
@@ -283,8 +285,9 @@ async def get_top_emotions(
         time_range=time_range,
         limit=limit,
         item_type=TopItemType.EMOTION,
-        comparison_field="percentage",
+        order_by_field="percentage",
         order_direction="DESC",
+        comparison_field="percentage",
         id_key="name",
         enrich_data=False
     )

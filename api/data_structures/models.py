@@ -28,7 +28,7 @@ class DBTrack(BaseModel):
 
 class DBGenre(BaseModel):
     genre_name: str
-    count: int
+    percentage: float
 
 
 class DBEmotion(BaseModel):

@@ -60,6 +60,11 @@ class DBService:
         elif item_type == TopItemType.TRACK:
             return [DBTrack(**entry) for entry in data]
         elif item_type == TopItemType.GENRE:
+            total_count = sum([genre["count"] for genre in data])
+
+            for genre in data:
+                genre["percentage"] = round(genre["count"] / total_count, 2)
+
             return [DBGenre(**entry) for entry in data]
         elif item_type == TopItemType.EMOTION:
             return [DBEmotion(**entry) for entry in data]
