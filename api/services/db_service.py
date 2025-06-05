@@ -73,7 +73,8 @@ class DBService:
             collected_date: str,
             limit: int,
             item_type: TopItemType,
-            order_field: str
+            order_field: str,
+            order_direction: str
     ):
         cursor = self.connection.cursor(dictionary=True)
 
@@ -84,7 +85,7 @@ class DBService:
                 "WHERE spotify_user_id = %s "
                 "AND time_range = %s "
                 "AND collected_date = %s "
-                f"ORDER BY {order_field} "
+                f"ORDER BY {order_field} {order_direction} "
                 f"LIMIT {limit};"
             )
             cursor.execute(select_statement, (user_id, time_range.value, collected_date))
