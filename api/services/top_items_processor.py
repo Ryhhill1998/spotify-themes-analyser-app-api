@@ -129,6 +129,7 @@ class TopItemsProcessor:
     async def _get_top_items(
             self,
             user_id: str,
+            access_token: str,
             time_range: TopItemTimeRange,
             limit: int,
             item_type: TopItemType,
@@ -138,8 +139,6 @@ class TopItemsProcessor:
             id_key: str = "id",
             enrich_data: bool = True
     ):
-        user = self.db_service.get_user(user_id)
-        updated_tokens = await self.spotify_data_service.refresh_tokens(user.refresh_token)
         collection_dates = get_collection_dates(update_hour=8, update_minute=30)
 
         db_top_items_latest = self.db_service.get_top_items(
@@ -154,7 +153,7 @@ class TopItemsProcessor:
 
         if not db_top_items_latest:
             top_items = await self._default_get_top_items(
-                access_token=updated_tokens.access_token,
+                access_token=access_token,
                 item_type=item_type
             )
             return top_items
@@ -184,34 +183,37 @@ class TopItemsProcessor:
             db_items_data = await self._enrich_db_data_with_spotify_data(
                 db_data=db_items_data,
                 item_type=item_type,
-                access_token=updated_tokens.access_token
+                access_token=access_token
             )
 
         top_items = self._create_top_items_from_data(data=db_items_data, item_type=item_type)
 
         return top_items
     
-    async def get_top_artists(self, user_id: str, time_range: TopItemTimeRange, limit: int):
+    async def get_top_artists(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
         top_artists = await self._get_top_items(
             user_id=user_id,
+            access_token=access_token,
             time_range=time_range,
             limit=limit,
             item_type=TopItemType.ARTIST
         )
         return top_artists
     
-    async def get_top_tracks(self, user_id: str, time_range: TopItemTimeRange, limit: int):
+    async def get_top_tracks(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
         top_tracks = await self._get_top_items(
             user_id=user_id,
+            access_token=access_token,
             time_range=time_range,
             limit=limit,
             item_type=TopItemType.TRACK
         )
         return top_tracks
     
-    async def get_top_genres(self, user_id: str, time_range: TopItemTimeRange, limit: int):
+    async def get_top_genres(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
         top_genres = await self._get_top_items(
             user_id=user_id,
+            access_token=access_token,
             time_range=time_range,
             limit=limit,
             item_type=TopItemType.GENRE,
@@ -223,9 +225,10 @@ class TopItemsProcessor:
         )
         return top_genres
     
-    async def get_top_emotions(self, user_id: str, time_range: TopItemTimeRange, limit: int):
+    async def get_top_emotions(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
         top_emotions = await self._get_top_items(
             user_id=user_id,
+            access_token=access_token,
             time_range=time_range,
             limit=limit,
             item_type=TopItemType.EMOTION,

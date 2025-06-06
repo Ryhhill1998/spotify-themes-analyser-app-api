@@ -42,7 +42,7 @@ def get_user_id_from_token(token: Annotated[str, Depends(oauth2_scheme)], token_
     return user_id
 
 
-GetUserIdDependency = Annotated[str, Depends(get_user_id_from_token)]
+UserIdDependency = Annotated[str, Depends(get_user_id_from_token)]
 
 
 def get_endpoint_requester(request: Request) -> EndpointRequester:
@@ -122,3 +122,23 @@ async def get_memory_store(settings: SettingsDependency):
 
 
 MemoryStoreDependency = Annotated[MemoryStore, Depends(get_memory_store)]
+
+
+async def get_access_token(
+        user_id: UserIdDependency,
+        memory_store: MemoryStoreDependency,
+        db_service: DBServiceDependency,
+        spotify_data_service: SpotifyDataServiceDependency
+):
+    access_token = await memory_store.retrieve_access_token(user_id)
+
+    if not access_token:
+        user = db_service.get_user(user_id)
+        updated_tokens = await spotify_data_service.refresh_tokens(user.refresh_token)
+        access_token = updated_tokens.access_token
+        await memory_store.store_access_token(user_id=user_id, access_token=access_token)
+
+    return access_token
+
+
+AccessTokenDependency = Annotated[str, Depends(get_access_token)]
