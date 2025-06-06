@@ -4,9 +4,11 @@ from typing import Annotated
 import mysql.connector
 from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
+import redis.asyncio as redis
 
 from api.services.db_service import DBService
 from api.services.endpoint_requester import EndpointRequester
+from api.services.memory_store import MemoryStore
 from api.services.spotify_auth_service import SpotifyAuthService
 from api.services.spotify_data_service import SpotifyDataService
 from api.services.token_service import TokenService
@@ -102,3 +104,21 @@ def get_top_items_processor(
 
 
 TopItemsProcessorDependency = Annotated[TopItemsProcessor, Depends(get_top_items_processor)]
+
+
+async def get_memory_store(settings: SettingsDependency):
+    redis_client = redis.Redis(
+        host=settings.redis_host,
+        port=settings.redis_port,
+        decode_responses=True,
+        username=settings.redis_username,
+        password=settings.redis_password,
+    )
+
+    try:
+        yield MemoryStore(redis_client)
+    finally:
+        await redis_client.aclose()
+
+
+MemoryStoreDependency = Annotated[MemoryStore, Depends(get_memory_store)]

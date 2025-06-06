@@ -47,4 +47,9 @@ class Settings(BaseSettings):
     encryption_secret_key: str
     encryption_algorithm: str
 
+    redis_host: str
+    redis_port: int
+    redis_username: str
+    redis_password: str
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
