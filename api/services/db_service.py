@@ -15,7 +15,8 @@ class DBService:
     def __init__(self, connection: PooledMySQLConnection):
         self.connection = connection
 
-    def create_user(self, user_id: str, refresh_token: str):
+    def create_user(self, user_id: str, refresh_token: str) -> bool:
+        user_created = False
         cursor = self.connection.cursor()
 
         try:
@@ -24,6 +25,7 @@ class DBService:
                 (user_id, refresh_token)
             )
             self.connection.commit()
+            user_created = True
         except mysql.connector.IntegrityError as e:
             logger.info(f"User already exists: {user_id} - {e}")
         except mysql.connector.Error as e:
@@ -33,6 +35,8 @@ class DBService:
             raise DBServiceException(error_message)
         finally:
             cursor.close()
+
+        return user_created
 
     def get_user(self, user_id: str) -> DBUser:
         cursor = self.connection.cursor(dictionary=True)

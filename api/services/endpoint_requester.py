@@ -259,6 +259,7 @@ class EndpointRequester:
     async def post(
             self,
             url: str,
+            params: dict = None,
             headers: dict[str, str] = None,
             data: dict[str, Any] = None,
             json_data: Any | None = None,
@@ -298,6 +299,7 @@ class EndpointRequester:
         return await self._request(
             method=RequestMethod.POST,
             url=url,
+            params=params,
             headers=headers,
             data=data,
             json_data=json_data,

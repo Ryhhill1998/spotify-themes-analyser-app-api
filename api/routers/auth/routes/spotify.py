@@ -47,8 +47,8 @@ async def get_token(
         token_request: TokenRequest,
         spotify_auth_service: SpotifyAuthServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
-        settings: SettingsDependency,
         db_service: DBServiceDependency,
+        settings: SettingsDependency,
         token_service: TokenServiceDependency
 ) -> dict[str, str]:
     try:
@@ -59,15 +59,21 @@ async def get_token(
         profile_data = await spotify_data_service.get_profile(tokens.access_token)
         user_id = profile_data.id
 
-        # add user data to SQS for processing
-        sqs = boto3.client("sqs")
-        message = json.dumps({"user_id": user_id, "refresh_token": tokens.refresh_token})
-        logger.info(f"Sending user data to SQS queue: {message}")
-        res = sqs.send_message(QueueUrl=settings.queue_url, MessageBody=message)
-        logger.info(f"User data sent to SQS queue. Response: {res}")
-
         # create new user in db
-        db_service.create_user(user_id=user_id, refresh_token=tokens.refresh_token)
+        new_user_created = db_service.create_user(user_id=user_id, refresh_token=tokens.refresh_token)
+
+        if new_user_created:
+            # add user data to SQS for processing
+            sqs = boto3.client(
+                "sqs",
+                aws_access_key_id=settings.aws_access_key,
+                aws_secret_access_key=settings.aws_secret_access_key,
+                region_name=settings.aws_region
+            )
+            message = json.dumps({"user_id": user_id, "refresh_token": tokens.refresh_token})
+            logger.info(f"Sending user data to SQS queue: {message}")
+            res = sqs.send_message(QueueUrl=settings.queue_url, MessageBody=message)
+            logger.info(f"User data sent to SQS queue. Response: {res}")
 
         # create JWT
         jwt = token_service.create_token({"user_id": user_id})

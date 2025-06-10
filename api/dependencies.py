@@ -39,6 +39,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/spotify/token")
 
 def get_user_id_from_token(token: Annotated[str, Depends(oauth2_scheme)], token_service: TokenServiceDependency) -> str:
     user_id = token_service.decode_token(token)["user_id"]
+    print(f"{user_id = }")
     return user_id
 
 

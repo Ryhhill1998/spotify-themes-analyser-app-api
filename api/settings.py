@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     db_pass: str
 
     queue_url: str
+    aws_access_key: str
+    aws_secret_access_key: str
+    aws_region: str
 
     encryption_secret_key: str
     encryption_algorithm: str

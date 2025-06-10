@@ -79,8 +79,19 @@ class TopItemsProcessor:
         )
         return top_items_with_position_changes
 
-    async def _default_get_top_items(self, access_token: str, item_type: TopItemType):
-        spotify_items = await self.spotify_data_service.get_top_items(access_token=access_token, item_type=item_type)
+    async def _default_get_top_items(
+            self,
+            access_token: str,
+            item_type: TopItemType,
+            time_range: TopItemTimeRange,
+            limit: int
+    ):
+        spotify_items = await self.spotify_data_service.get_top_items(
+            access_token=access_token,
+            item_type=item_type,
+            time_range=time_range,
+            limit=limit
+        )
         top_items = create_top_items_from_data(
             data=[item.model_dump() for item in spotify_items], 
             item_type=item_type
@@ -141,7 +152,9 @@ class TopItemsProcessor:
         if not db_top_items_latest:
             top_items = await self._default_get_top_items(
                 access_token=access_token,
-                item_type=item_type
+                item_type=item_type,
+                time_range=time_range,
+                limit=limit
             )
             return top_items
 

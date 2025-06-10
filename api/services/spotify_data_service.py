@@ -1,4 +1,4 @@
-from api.data_structures.enums import TopItemType
+from api.data_structures.enums import TopItemType, TopItemTimeRange
 from api.data_structures.models import SpotifyArtist, SpotifyTokens, SpotifyTrack, SpotifyGenre, SpotifyItem, \
     SpotifyProfile, Emotion, EmotionalTagsResponse
 from api.services.endpoint_requester import EndpointRequester
@@ -36,10 +36,11 @@ class SpotifyDataService:
         else:
             raise ValueError("Invalid item type")
 
-    async def get_top_items(self, access_token: str, item_type: TopItemType):
+    async def get_top_items(self, access_token: str, item_type: TopItemType, time_range: TopItemTimeRange, limit: int):
         url = f"{self.base_url}/data/me/top/{item_type.value}s"
+        params = {"time_range": time_range.value, "limit": limit}
         req_body = {"access_token": access_token}
-        data = await self.endpoint_requester.post(url=url, json_data=req_body)
+        data = await self.endpoint_requester.post(url=url, json_data=req_body, params=params)
         top_items = self._create_spotify_items_from_data(data=data, item_type=item_type)
         return top_items
 
