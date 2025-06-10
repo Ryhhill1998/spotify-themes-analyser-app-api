@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     db_user: str
     db_pass: str
 
+    queue_url: str
+
     encryption_secret_key: str
     encryption_algorithm: str
 

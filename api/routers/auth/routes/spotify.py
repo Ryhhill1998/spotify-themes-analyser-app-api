@@ -1,11 +1,13 @@
+import json
 import secrets
 
+import boto3
 from fastapi import Response, APIRouter, HTTPException
 from loguru import logger
 from pydantic import BaseModel
 
 from api.dependencies import SpotifyAuthServiceDependency, SpotifyDataServiceDependency, DBServiceDependency, \
-    TokenServiceDependency
+    TokenServiceDependency, SettingsDependency
 from api.services.spotify_auth_service import SpotifyAuthServiceException
 
 router = APIRouter(prefix="/spotify")
@@ -45,6 +47,7 @@ async def get_token(
         token_request: TokenRequest,
         spotify_auth_service: SpotifyAuthServiceDependency,
         spotify_data_service: SpotifyDataServiceDependency,
+        settings: SettingsDependency,
         db_service: DBServiceDependency,
         token_service: TokenServiceDependency
 ) -> dict[str, str]:
@@ -55,6 +58,13 @@ async def get_token(
         spotify_data_service.access_token = tokens.access_token
         profile_data = await spotify_data_service.get_profile(tokens.access_token)
         user_id = profile_data.id
+
+        # add user data to SQS for processing
+        sqs = boto3.client("sqs")
+        message = json.dumps({"user_id": user_id, "refresh_token": tokens.refresh_token})
+        logger.info(f"Sending user data to SQS queue: {message}")
+        res = sqs.send_message(QueueUrl=settings.queue_url, MessageBody=message)
+        logger.info(f"User data sent to SQS queue. Response: {res}")
 
         # create new user in db
         db_service.create_user(user_id=user_id, refresh_token=tokens.refresh_token)
