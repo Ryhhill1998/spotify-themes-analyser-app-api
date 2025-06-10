@@ -5,8 +5,8 @@ from pydantic import Field
 
 from api.data_structures.enums import TopItemTimeRange
 from api.data_structures.models import SpotifyProfile, TopEmotion, TopArtist, TopTrack, TopGenre
-from api.dependencies import SpotifyDataServiceDependency, UserIdDependency, \
-    TopItemsProcessorDependency, AccessTokenDependency
+from api.dependencies import SpotifyDataServiceDependency, UserIdDependency, TopItemsProcessorDependency, \
+    AccessTokenDependency
 
 router = APIRouter(prefix="/me")
 
@@ -34,6 +34,7 @@ async def get_top_artists(
         time_range=time_range,
         limit=limit
     )
+
     return top_artists
 
 
