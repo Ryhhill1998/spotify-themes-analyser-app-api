@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from api.data_structures.enums import TopItemType, TopItemTimeRange
-from api.data_structures.models import PositionChange, TopArtist, TopTrack, TopGenre, TopEmotion
+from api.data_structures.models import PositionChange, create_top_items_from_data
 from api.services.db_service import DBService
 from api.services.spotify_data_service import SpotifyDataService
 
@@ -78,23 +78,10 @@ class TopItemsProcessor:
             .to_dict(orient="records")
         )
         return top_items_with_position_changes
-    
-    @staticmethod
-    def _create_top_items_from_data(data, item_type: TopItemType):
-        if item_type == TopItemType.ARTIST:
-            return [TopArtist(**entry) for entry in data]
-        elif item_type == TopItemType.TRACK:
-            return [TopTrack(**entry) for entry in data]
-        elif item_type == TopItemType.GENRE:
-            return [TopGenre(**entry) for entry in data]
-        elif item_type == TopItemType.EMOTION:
-            return [TopEmotion(**entry) for entry in data]
-        else:
-            raise ValueError("Invalid item type")
 
     async def _default_get_top_items(self, access_token: str, item_type: TopItemType):
         spotify_items = await self.spotify_data_service.get_top_items(access_token=access_token, item_type=item_type)
-        top_items = self._create_top_items_from_data(
+        top_items = create_top_items_from_data(
             data=[item.model_dump() for item in spotify_items], 
             item_type=item_type
         )
@@ -186,7 +173,7 @@ class TopItemsProcessor:
                 access_token=access_token
             )
 
-        top_items = self._create_top_items_from_data(data=db_items_data, item_type=item_type)
+        top_items = create_top_items_from_data(data=db_items_data, item_type=item_type)
 
         return top_items
     

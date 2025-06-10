@@ -3,6 +3,8 @@ from enum import Enum
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey, RSAPrivateKey
 from pydantic import BaseModel, ConfigDict
 
+from api.data_structures.enums import TopItemType
+
 
 class EncryptionKeys(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -216,6 +218,19 @@ class TopGenre(SpotifyGenre, TopItem):
 
 class TopEmotion(SpotifyEmotion, TopItem):
     pass
+
+
+def create_top_items_from_data(data, item_type: TopItemType):
+    if item_type == TopItemType.ARTIST:
+        return [TopArtist(**entry) for entry in data]
+    elif item_type == TopItemType.TRACK:
+        return [TopTrack(**entry) for entry in data]
+    elif item_type == TopItemType.GENRE:
+        return [TopGenre(**entry) for entry in data]
+    elif item_type == TopItemType.EMOTION:
+        return [TopEmotion(**entry) for entry in data]
+    else:
+        raise ValueError("Invalid item type")
 
 
 class AnalysisRequestBase(BaseModel):
