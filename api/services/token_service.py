@@ -15,20 +15,23 @@ class TokenService:
         self.secret_key = secret_key
         self.encryption_algorithm = encryption_algorithm
 
-    def create_token(self, user_id: dict) -> str:
+    def create_token(self, user_id: dict) -> tuple[str, int]:
         uk_tz = ZoneInfo("Europe/London")
-        token_expiry = datetime.now(tz=uk_tz) + timedelta(days=1)
+        now = datetime.now(tz=uk_tz)
+        max_age = timedelta(days=1)
+        token_expiry = now + max_age
+        max_age_seconds = round(max_age.total_seconds())
 
         return jwt.encode(
             payload={"user_id": user_id, "exp": token_expiry},
             key=self.secret_key,
             algorithm=self.encryption_algorithm
-        )
+        ), max_age_seconds
 
     def decode_token(self, token: str) -> dict:
         try:
             return jwt.decode(jwt=token, key=self.secret_key, algorithms=[self.encryption_algorithm])
-        except jwt.ExpiredSignatureError:
+        except jwt.ExpiredSignatureError as e:
             error_message = "Token expired"
-            logger.error(error_message)
+            logger.error(f"{error_message} - {e}")
             raise TokenServiceException(error_message)

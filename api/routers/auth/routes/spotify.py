@@ -42,7 +42,7 @@ class TokenRequest(BaseModel):
     code: str
 
 
-@router.post("/token", response_model=dict[str, str])
+@router.post("/token", response_model=dict[str, str | int])
 async def get_token(
         token_request: TokenRequest,
         spotify_auth_service: SpotifyAuthServiceDependency,
@@ -50,7 +50,7 @@ async def get_token(
         db_service: DBServiceDependency,
         settings: SettingsDependency,
         token_service: TokenServiceDependency
-) -> dict[str, str]:
+) -> dict[str, str | int]:
     try:
         tokens = await spotify_auth_service.create_tokens(token_request.code)
 
@@ -76,9 +76,9 @@ async def get_token(
             logger.info(f"User data sent to SQS queue. Response: {res}")
 
         # create JWT
-        jwt = token_service.create_token(user_id)
+        jwt, expiry_seconds = token_service.create_token(user_id)
 
-        return {"access_token": jwt, "token_type": "bearer"}
+        return {"access_token": jwt, "token_type": "bearer", "max_age": expiry_seconds}
     except SpotifyAuthServiceException as e:
         logger.error(f"Failed to create tokens from code: {token_request.code} - {e}")
         raise HTTPException(status_code=401, detail="Invalid authorisation code.")
