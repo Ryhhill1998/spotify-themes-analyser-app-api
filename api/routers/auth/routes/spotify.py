@@ -76,7 +76,7 @@ async def get_token(
             logger.info(f"User data sent to SQS queue. Response: {res}")
 
         # create JWT
-        jwt = token_service.create_token({"user_id": user_id})
+        jwt = token_service.create_token(user_id)
 
         return {"access_token": jwt, "token_type": "bearer"}
     except SpotifyAuthServiceException as e:
