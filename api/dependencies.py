@@ -2,7 +2,7 @@ from functools import lru_cache
 from typing import Annotated
 
 import mysql.connector
-from fastapi import Depends, Request
+from fastapi import Depends, Request, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 import redis.asyncio as redis
 
@@ -11,7 +11,7 @@ from api.services.endpoint_requester import EndpointRequester
 from api.services.memory_store import MemoryStore
 from api.services.spotify_auth_service import SpotifyAuthService
 from api.services.spotify_data_service import SpotifyDataService
-from api.services.token_service import TokenService
+from api.services.token_service import TokenService, TokenServiceException
 from api.services.top_items_processor import TopItemsProcessor
 from api.settings import Settings
 
@@ -38,9 +38,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/spotify/token")
 
 
 def get_user_id_from_token(token: Annotated[str, Depends(oauth2_scheme)], token_service: TokenServiceDependency) -> str:
-    user_id = token_service.decode_token(token)["user_id"]
-    print(f"{user_id = }")
-    return user_id
+    try:
+        user_id = token_service.decode_token(token)["user_id"]
+        return user_id
+    except TokenServiceException:
+        raise HTTPException(status_code=401, detail="Token expired.")
 
 
 UserIdDependency = Annotated[str, Depends(get_user_id_from_token)]
