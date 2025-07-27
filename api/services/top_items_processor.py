@@ -72,11 +72,7 @@ class TopItemsProcessor:
         )
         merged_df["position_change"] = merged_df[f"{comparison_field}_prev"] - merged_df[comparison_field]
         merged_df["position_change"] = merged_df["position_change"].apply(self._format_position_change)
-        top_items_with_position_changes = (
-            merged_df
-            .sort_values(by=comparison_field, ascending=False)
-            .to_dict(orient="records")
-        )
+        top_items_with_position_changes = merged_df.to_dict(orient="records")
         return top_items_with_position_changes
 
     async def _default_get_top_items(
@@ -133,7 +129,6 @@ class TopItemsProcessor:
             item_type: TopItemType,
             order_by_field: str = "position",
             order_direction: str = "ASC",
-            comparison_field: str = "position",
             id_key: str = "id",
             enrich_data: bool = True
     ):
@@ -175,9 +170,10 @@ class TopItemsProcessor:
                 top_items_latest=db_top_items_latest,
                 top_items_previous=db_top_items_previous,
                 item_type=item_type,
-                comparison_field=comparison_field,
                 id_key=id_key
             )
+
+        # print(f"{db_items_data = }")
 
         if enrich_data:
             db_items_data = await self._enrich_db_data_with_spotify_data(
@@ -219,7 +215,6 @@ class TopItemsProcessor:
             item_type=TopItemType.GENRE,
             order_by_field="count",
             order_direction="DESC",
-            comparison_field="percentage",
             id_key="name",
             enrich_data=False
         )
@@ -234,7 +229,6 @@ class TopItemsProcessor:
             item_type=TopItemType.EMOTION,
             order_by_field="percentage",
             order_direction="DESC",
-            comparison_field="percentage",
             id_key="name",
             enrich_data=False
         )

@@ -69,9 +69,9 @@ class DBService:
             for genre in data:
                 genre["percentage"] = round(genre["count"] / total_count, 2)
 
-            return [DBGenre(**entry) for entry in data]
+            return [DBGenre(**entry, position=i + 1) for i, entry in enumerate(data)]
         elif item_type == TopItemType.EMOTION:
-            return [DBEmotion(**entry) for entry in data]
+            return [DBEmotion(**entry, position=i + 1) for i, entry in enumerate(data)]
         else:
             raise ValueError("Invalid item type")
             

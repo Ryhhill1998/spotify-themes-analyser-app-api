@@ -31,12 +31,14 @@ class DBTrack(BaseModel):
 class DBGenre(BaseModel):
     genre_name: str
     percentage: float
+    position: int
 
 
 class DBEmotion(BaseModel):
     emotion_name: str
     percentage: float
     track_id: str | None
+    position: int
 
 
 class SpotifyTokens(BaseModel):
