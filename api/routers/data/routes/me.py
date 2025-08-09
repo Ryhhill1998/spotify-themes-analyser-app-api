@@ -28,7 +28,7 @@ async def get_top_artists(
         time_range: TopItemTimeRange,
         limit: Annotated[int, Field(ge=10, le=50)] = 50
 ) -> list[TopArtist]:
-    top_artists = await top_items_processor.get_top_artists(
+    top_artists = await top_items_processor.get_top_artists_with_position_changes(
         user_id=user_id,
         access_token=access_token,
         time_range=time_range,
@@ -46,7 +46,7 @@ async def get_top_tracks(
         time_range: TopItemTimeRange,
         limit: Annotated[int, Field(ge=10, le=50)] = 50
 ) -> list[TopTrack]:
-    top_tracks = await top_items_processor.get_top_tracks(
+    top_tracks = await top_items_processor.get_top_tracks_with_position_changes(
         user_id=user_id,
         access_token=access_token,
         time_range=time_range,
@@ -63,7 +63,7 @@ async def get_top_genres(
         time_range: TopItemTimeRange,
         limit: Annotated[int, Field(ge=1)] = 5
 ) -> list[TopGenre]:
-    top_genres = await top_items_processor.get_top_genres(
+    top_genres = await top_items_processor.get_top_genres_with_position_changes(
         user_id=user_id,
         access_token=access_token,
         time_range=time_range,
@@ -80,7 +80,7 @@ async def get_top_emotions(
         time_range: TopItemTimeRange,
         limit: Annotated[int, Field(ge=1, le=15)] = 5
 ) -> list[TopEmotion]:
-    top_emotions = await top_items_processor.get_top_emotions(
+    top_emotions = await top_items_processor.get_top_emotions_with_position_changes(
         user_id=user_id,
         access_token=access_token,
         time_range=time_range,

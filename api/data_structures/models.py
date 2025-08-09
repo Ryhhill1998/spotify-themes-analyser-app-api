@@ -204,6 +204,7 @@ class PositionChange(str, Enum):
 
 class TopItem(BaseModel):
     position_change: PositionChange | None = None
+    common: bool = False
 
 
 class TopArtist(SpotifyArtist, TopItem):

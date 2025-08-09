@@ -20,8 +20,7 @@ def get_collection_dates(update_hour: int, update_minute: int) -> CollectionDate
     uk_tz = ZoneInfo("Europe/London")
     latest_date = datetime.now(uk_tz)
 
-    update_time_uk = datetime.combine(latest_date.date(), time(hour=update_hour, minute=update_minute),
-                                      tzinfo=uk_tz)
+    update_time_uk = datetime.combine(latest_date.date(), time(hour=update_hour, minute=update_minute), tzinfo=uk_tz)
 
     if latest_date < update_time_uk:
         latest_date -= timedelta(days=1)
@@ -40,7 +39,7 @@ class TopItemsProcessor:
     def __init__(self, db_service: DBService, spotify_data_service: SpotifyDataService):
         self.db_service = db_service
         self.spotify_data_service = spotify_data_service
-    
+
     @staticmethod
     def _format_position_change(position_change_value: float) -> PositionChange | None:
         if position_change_value < 0:
@@ -89,7 +88,7 @@ class TopItemsProcessor:
             limit=limit
         )
         top_items = create_top_items_from_data(
-            data=[item.model_dump() for item in spotify_items], 
+            data=[item.model_dump() for item in spotify_items],
             item_type=item_type
         )
         return top_items
@@ -121,6 +120,49 @@ class TopItemsProcessor:
         return enriched_data
 
     async def _get_top_items(
+            self,
+            user_id: str,
+            access_token: str,
+            item_type: TopItemType,
+            time_range: TopItemTimeRange,
+            limit: int,
+            order_by_field: str = "position",
+            order_direction: str = "ASC",
+            enrich_data: bool = True,
+    ):
+        collection_dates = get_collection_dates(update_hour=8, update_minute=30)
+
+        top_items = self.db_service.get_top_items(
+            user_id=user_id,
+            time_range=time_range,
+            collected_date=collection_dates.latest,
+            limit=limit,
+            item_type=item_type,
+            order_field=order_by_field,
+            order_direction=order_direction
+        )
+
+        if not top_items:
+            top_items = await self._default_get_top_items(
+                access_token=access_token,
+                item_type=item_type,
+                time_range=time_range,
+                limit=limit
+            )
+            return top_items
+
+        if enrich_data:
+            top_items_data = [item.model_dump() for item in top_items]
+            enriched_top_items_data = await self._enrich_db_data_with_spotify_data(
+                db_data=top_items_data,
+                item_type=item_type,
+                access_token=access_token
+            )
+            top_items = create_top_items_from_data(data=enriched_top_items_data, item_type=item_type)
+
+        return top_items
+
+    async def _get_top_items_with_position_changes(
             self,
             user_id: str,
             access_token: str,
@@ -173,8 +215,6 @@ class TopItemsProcessor:
                 id_key=id_key
             )
 
-        # print(f"{db_items_data = }")
-
         if enrich_data:
             db_items_data = await self._enrich_db_data_with_spotify_data(
                 db_data=db_items_data,
@@ -185,7 +225,7 @@ class TopItemsProcessor:
         top_items = create_top_items_from_data(data=db_items_data, item_type=item_type)
 
         return top_items
-    
+
     async def get_top_artists(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
         top_artists = await self._get_top_items(
             user_id=user_id,
@@ -195,7 +235,7 @@ class TopItemsProcessor:
             item_type=TopItemType.ARTIST
         )
         return top_artists
-    
+
     async def get_top_tracks(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
         top_tracks = await self._get_top_items(
             user_id=user_id,
@@ -205,9 +245,55 @@ class TopItemsProcessor:
             item_type=TopItemType.TRACK
         )
         return top_tracks
-    
+
     async def get_top_genres(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
         top_genres = await self._get_top_items(
+            user_id=user_id,
+            access_token=access_token,
+            time_range=time_range,
+            limit=limit,
+            item_type=TopItemType.GENRE,
+            order_by_field="count",
+            order_direction="DESC",
+            enrich_data=False
+        )
+        return top_genres
+
+    async def get_top_emotions(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
+        top_emotions = await self._get_top_items(
+            user_id=user_id,
+            access_token=access_token,
+            time_range=time_range,
+            limit=limit,
+            item_type=TopItemType.EMOTION,
+            order_by_field="percentage",
+            order_direction="DESC",
+            enrich_data=False
+        )
+        return top_emotions
+
+    async def get_top_artists_with_position_changes(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
+        top_artists = await self._get_top_items_with_position_changes(
+            user_id=user_id,
+            access_token=access_token,
+            time_range=time_range,
+            limit=limit,
+            item_type=TopItemType.ARTIST
+        )
+        return top_artists
+
+    async def get_top_tracks_with_position_changes(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
+        top_tracks = await self._get_top_items_with_position_changes(
+            user_id=user_id,
+            access_token=access_token,
+            time_range=time_range,
+            limit=limit,
+            item_type=TopItemType.TRACK
+        )
+        return top_tracks
+
+    async def get_top_genres_with_position_changes(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
+        top_genres = await self._get_top_items_with_position_changes(
             user_id=user_id,
             access_token=access_token,
             time_range=time_range,
@@ -219,9 +305,9 @@ class TopItemsProcessor:
             enrich_data=False
         )
         return top_genres
-    
-    async def get_top_emotions(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
-        top_emotions = await self._get_top_items(
+
+    async def get_top_emotions_with_position_changes(self, user_id: str, access_token: str, time_range: TopItemTimeRange, limit: int):
+        top_emotions = await self._get_top_items_with_position_changes(
             user_id=user_id,
             access_token=access_token,
             time_range=time_range,
@@ -233,4 +319,3 @@ class TopItemsProcessor:
             enrich_data=False
         )
         return top_emotions
-    
